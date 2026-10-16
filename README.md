@@ -1,73 +1,61 @@
 # DOCAI — ALSSAEDY CLINIC ERP
 
-Arabic-first dental-clinic PWA for receipts, patient debts, inventory, expenses, financial summaries, backups and AI-assisted workflows.
+Arabic-first dental clinic ERP PWA for receipts, patients, inventory, expenses, reports and AI-assisted chat.
 
-## AI keys: enter them in the website settings
+## AI keys are entered in the website settings
 
-No Vercel environment variables are required for the text-model API keys in this version. Open **Settings → AI models**, enter one or more provider keys, then click **فحص النماذج باستجابة فعلية**.
+No provider API key needs to be added to Vercel environment variables. At the start of a test session, open **Settings → AI models**, paste the API keys into the corresponding password fields, and press **فحص النماذج باستجابة فعلية**.
 
-- **Gemini:** supports text and image input for models that pass the live check.
-- **Groq:** text models can be tested; its Arabic model-generated speech is a separate provider service and may be billed.
-- **OpenRouter:** free routes are marked as free routes, but availability and quotas can change.
-- A model appears in the selector only after a small real completion request returns non-empty text. The AI workflow refuses to use a model that has not passed the current session's live check. Changing a key clears the tested list.
-- The test consumes a small amount of provider quota. Avoid repeatedly running it.
-- Free access is not guaranteed for every account, region, model, or time. Check the provider dashboard for current daily/minute/token limits and prices.
-
-### Key handling
-
-Keys are typed into password fields and sent over HTTPS in the request to this app's serverless endpoint. This implementation does not intentionally save provider keys to `localStorage`, backups, or cloud backups; a refresh clears the fields. Keys remain in the active page until cleared or the page is refreshed. Use **مسح مفاتيح AI من الجلسة** before leaving a shared device. Do not use the app on a device you do not trust. Provider requests are sent to the chosen provider; do not send patient identifiers unless necessary and permitted by your clinic's policies.
-
-The app server does not keep a provider key between requests. The browser supplies the key for each AI, model-test, or model-voice request. Endpoints are not a substitute for user authentication or a production access-control layer.
-
-## Topic-scoped clinic context
-
-The AI workflow does not attach the full clinic database to every prompt. It selects relevant records based on the question topic, limits the number of records included, uses exact matching for patient-specific requests, and avoids sending other patients' records when a requested patient is not found. Large audit requests are split into bounded batches. Currency differences and missing data should be called out instead of guessed.
-
-Use the minimum patient details needed to answer. AI-generated text is advisory; verify all amounts and patient information against the original record before making clinical or financial decisions.
-
-## Chat attachments
-
-Supported in the chat: PNG/JPEG/WebP/GIF images (Gemini key required), text-based PDF (extracts up to 12 pages), scanned PDF fallback as up to 2 page images (Gemini required), DOCX, XLSX/XLS, TXT, MD, CSV, JSON and LOG files. Maximum 5 files per message; image size is limited to about 2.5 MB and other files to 4 MB. Image analysis requires a model that passed the live check and a Gemini key. Scanned PDFs without a text layer are rendered as up to 2 page images for Gemini vision; this is visual analysis, not OCR text extraction. DOCX/XLSX parsing uses browser-loaded third-party libraries.
+- Keys are held in the current page session only and are not intentionally written to localStorage. Reloading the page clears them; enter them again for a new session.
+- The keys are sent over HTTPS to this app's serverless endpoints for a request, then forwarded to the selected provider. Do not enter keys on a shared or untrusted device.
+- The browser UI only lists models that return a real non-empty response to the test prompt. A passing test is not a guarantee of future uptime or quota.
+- Testing consumes provider requests. Repeated tests may use up free quotas.
+- OpenRouter routes labelled `:free` can be free when available, but limits, eligibility, and availability vary. Gemini and Groq free quotas depend on the provider account and model.
+- **Never merge any code that stores provider keys in browser storage.** The current UI save handler clears AI provider keys from persisted settings.
 
 ## Voice
 
-- **Phone/system voice:** uses browser speech recognition and the device/browser's built-in speech synthesis.
-- **Model voice:** sends answer segments to Groq's Arabic TTS endpoint using the Groq key entered in settings. This may incur separate usage charges.
-- The hands-free workflow is turn-based (listen → transcribe → request response → play answer → listen again), not a full-duplex real-time audio call. Microphone permission and browser speech support are required.
+- **Phone/system voice** uses the browser/device speech recognition and system text-to-speech voices.
+- **Model-generated Arabic voice** uses Groq's Orpheus Arabic Saudi TTS endpoint and needs the Groq key entered in the page settings. It may consume paid quota.
+- The current hands-free mode is turn-based: listen → transcribe → send prompt → play answer → listen again. It is not full-duplex real-time voice.
+- Microphone access and browser speech recognition support are required. The browser may use device or browser services for speech recognition.
 
-## Encrypted cloud backup
+## Relevant context and attachments
 
-The Settings screen supports JSONBin backup and restore. The JSONBin key is used from the visible password field and is not stored in local storage. Before upload, the clinic data is encrypted in the browser using AES-GCM with a password-derived key (PBKDF2). The passphrase is never sent to JSONBin and cannot be recovered if lost. Keep the JSONBin key, Bin ID and encryption passphrase safe. Restore creates a local JSON backup before replacing browser data.
+The AI assistant selects topic-relevant records rather than attaching every patient, receipt, inventory item and expense to every question. Patient-specific queries with no exact match should not send other patients' records. Larger report requests are summarized in bounded batches.
 
-Cloud backup stores encrypted data at a third-party service; protect the JSONBin key and encryption passphrase. Confirm your clinic's privacy/legal requirements before using any external cloud service.
+Chat attachment support includes text-based PDF extraction, image input for compatible Gemini models, and parsing common office documents when the relevant browser libraries load. Scanned PDFs may need image-capable Gemini analysis. Unsupported formats, oversized files, quota failures and missing extraction text should be reported rather than silently treated as analyzed.
 
-## Data and release limitations
+Do not send medical records to an external AI provider unless the clinic has assessed consent, privacy, retention, and applicable legal obligations. Keep prompts scoped and remove unnecessary identifiers.
 
-- Patient, receipt, inventory and expense records still primarily live in this browser's `localStorage`; they are not a shared server database and are not automatically synchronized between devices.
-- The app has local JSON backup/restore and encrypted manual cloud backup. Always maintain an offline backup and test restores with dummy data.
-- Receipt/inventory changes have validation and a stock movement log, but accounting policies, inventory quantities and existing legacy data need reconciliation by the clinic before production use.
-- No clinical diagnosis or treatment decision should rely solely on AI output.
-- This is a test branch, not a certified clinical or accounting system. Do not merge to production until browser/mobile acceptance checks pass with dummy data.
+## Data and backup
 
-## Automated checks
+- Clinic business data in this codebase remains primarily in browser localStorage. It is not a shared multi-device database and can be lost if browser storage is cleared.
+- JSON backup files contain sensitive patient and financial records. Store them securely and test restoring a copy before relying on them.
+- This app is not yet a validated medical record or accounting system. Reconcile all balances, receipt numbering, stock movements, print layouts, and restore behaviour with test data before clinical/financial production use.
 
-The GitHub Actions workflow runs Node syntax checks on serverless endpoints and the client script, parses the inline script, and checks for required UI handlers and key controls.
+## API endpoints
 
-## Manual acceptance checklist
+- `POST /api/ai` — text completion; accepts provider keys from the current settings session.
+- `POST /api/models` — live provider/model response tests; returns only successful models.
+- `POST /api/tts` — model-generated Arabic speech using the Groq key supplied for that request.
 
-1. Enter a valid key in Settings; test model discovery; confirm only successful models are listed.
-2. Change a key; confirm the old tested list is cleared; run the test again.
-3. Ask a general question; verify no clinic records are attached.
-4. Ask for a specific patient by name/phone; verify only exact matching records are included; try an unknown patient and confirm other patients' data is not sent.
-5. Test inventory/expense audit and a large report; reconcile results against source records.
-6. Test image, text PDF, TXT/CSV and unsupported attachment behavior.
-7. Test phone speech and model-generated speech separately, including denied microphone permission, missing keys, quota errors, and stop/restart.
-8. Create a dummy receipt, edit services, delete it, and confirm stock movement and quantity reconcile.
-9. Export a JSON backup, restore it into a test profile, and reconcile record counts/totals.
-10. Test encrypted JSONBin upload/restore with dummy data and a wrong passphrase; verify no provider/cloud keys appear in localStorage or exported backup.
-11. Verify Arabic A5/thermal print and PDF/image export on mobile and desktop.
-12. Check browser console/network errors before considering production.
+Provider keys are not stored server-side by these endpoints. They are passed in request bodies over HTTPS; avoid logging request bodies and do not share the app URL with untrusted parties if you are entering sensitive clinic data.
+
+## Acceptance checklist before production
+
+1. Enter each provider key in settings and verify only models returning a response appear.
+2. Ask a general question and confirm no patient or finance context is attached.
+3. Ask for a specific patient's balance; test an unknown patient and confirm other patient records are not sent.
+4. Test a large report with more than 25 receipts or 40 stock items; verify batch coverage and totals.
+5. Test PDF text, scanned PDF, images, DOCX, XLSX, CSV and text attachments, including oversized and unsupported files.
+6. Test phone voice and model voice separately; test denied microphone permission, unsupported browser speech recognition, TTS quota failure and stopping the loop.
+7. Export a backup, restore it into a test browser profile, and reconcile records, settings, inventory movements and financial totals.
+8. Verify Arabic print/PDF on mobile and desktop, including multipage receipts and RTL alignment.
+9. Confirm AI keys never appear in localStorage, exported backups, URLs or console logs.
+10. Test on multiple devices and do not treat browser-local data as shared until a proper authenticated database/sync service is implemented.
+11. Keep the pull request unmerged until these checks pass with test data.
 
 ## Deployment
 
-Vercel uses the static HTML entry point and the `api/` Node serverless functions. No provider API key environment variables are required for this settings-driven flow. The current branch is `feat/clinic-erp-hardening`; keep it separate from `main` until the acceptance checklist passes.
+The project uses a static HTML front end and Vercel Node serverless functions in `api/`. Redeploy the feature branch for preview tests. Do not merge to production before the acceptance checklist passes.
