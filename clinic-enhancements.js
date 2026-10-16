@@ -89,7 +89,7 @@ window.renderModelsTable=function(){
 };
 window.refreshVerifiedModels=async function(){
  const keys=window.getClinicProviderKeys(),status=document.getElementById('models-health-status'),tb=document.getElementById('models-matrix-table-body'),button=document.querySelector('#tab-settings button[onclick="testAndDiscoverAllModels()"]');
- if(!Object.values(keys).some(Boolean)){showToast('أدخل مفتاح مزود واحداً على الأقل في الإعدادات.','error');if(status)status.textContent='أدخل مفاتيحك أولاً';return;}
+ 
  if(status)status.textContent='جارٍ إرسال طلب اختبار حقيقي لكل نموذج…';if(button)button.disabled=true;
  if(tb){tb.replaceChildren();const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='p-3 text-center';td.textContent='جارٍ اختبار الاستجابة. قد يستهلك كل اختبار طلباً من حصتك.';tr.appendChild(td);tb.appendChild(tr);}
  try{
@@ -99,7 +99,7 @@ window.refreshVerifiedModels=async function(){
   const q=document.getElementById('quick-model-select'),old=window.AppState.settings.ai.selectedMode||'auto';
   if(q){q.replaceChildren();const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;q.appendChild(o);};add('auto','🤖 تلقائي: النماذج المجتازة فقط');window.AI_MODELS_CATALOG.forEach(m=>add(m.id,m.name+' · '+m.costClass));add('local','محلي دون اتصال (قدرات محدودة)');q.value=old==='local'||old==='auto'||window.AI_MODELS_CATALOG.some(m=>m.id===old)?old:'auto';window.AppState.settings.ai.selectedMode=q.value;}
   window.renderModelsTable();if(status)status.textContent='اجتاز الاختبار: '+window.AI_MODELS_CATALOG.length+' نموذجاً';
-  ['gemini','groq','openrouter'].forEach(k=>{const dot=document.getElementById('dot-'+k);if(dot){dot.textContent=keys[k]?'تم إدخال المفتاح':'لم يُدخل المفتاح';dot.className='text-[10px] px-2 py-0.5 rounded '+(keys[k]?'bg-emerald-900 text-emerald-300':'bg-slate-800 text-slate-400');}});
+  ['gemini','groq','openrouter'].forEach(k=>{const dot=document.getElementById('dot-'+k),available=(d.configuredProviders||[]).includes(k);if(dot){dot.textContent=available?'متاح للخادم':'لم يُضبط';dot.className='text-[10px] px-2 py-0.5 rounded '+(available?'bg-emerald-900 text-emerald-300':'bg-slate-800 text-slate-400');}});
   if(!window.AI_MODELS_CATALOG.length)showToast('لم ينجح أي نموذج. راجع المفتاح أو اسم النموذج أو الحصة.','error');else showToast('تم اختبار النماذج؛ المعروض هو ما استجاب الآن فقط.','success');
  }catch(e){window.AI_MODELS_CATALOG=[];window.renderModelsTable();if(status)status.textContent='فشل الاختبار';showToast(e.message,'error');}
  finally{if(button)button.disabled=false;}
