@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/ai.js": { "maxDuration": 60 },
+    "api/models.js": { "maxDuration": 30 },
+    "api/tts.js": { "maxDuration": 30 }
+  }
+}
