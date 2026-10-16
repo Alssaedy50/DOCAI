@@ -38,9 +38,17 @@ Do not send medical records to an external AI provider unless the clinic has ass
 
 - `POST /api/ai` — text completion; accepts provider keys from the current settings session.
 - `POST /api/models` — live provider/model response tests; returns only successful models.
-- `POST /api/tts` — model-generated Arabic speech using the Groq key supplied for that request.
+- `POST /api/tts` — model-generated Arabic speech using `GROQ_API_KEY` from Vercel, or the Groq key supplied in the settings request.
 
-Provider keys are not stored server-side by these endpoints. They are passed in request bodies over HTTPS; avoid logging request bodies and do not share the app URL with untrusted parties if you are entering sensitive clinic data.
+## Vercel environment variables (recommended)
+
+Configure these in **Vercel → Project → Settings → Environment Variables**, for Preview and Production as needed, then redeploy:
+
+- `GEMINI_API_KEY` — optional Google Gemini key
+- `GROQ_API_KEY` — optional Groq key (also used for generated Arabic speech)
+- `OPENROUTER_API_KEY` — optional OpenRouter key
+
+Add only the providers you intend to use. Server-side Vercel values take priority over keys entered in the browser. The API never returns secret values to the browser; it only reports which providers are configured and which models passed a live response test. The settings fields remain as a fallback for preview testing. Browser-entered keys are sent over HTTPS in request bodies and are not intended to be persisted in localStorage; avoid shared/untrusted devices and do not log request bodies.
 
 ## Acceptance checklist before production
 
