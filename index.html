@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>نظام عيادة د. صلاح الدين السعيدي | ALSSAEDY CLINIC ERP</title>
+
+  <!-- خطوط عربية رسمية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS & FontAwesome Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- مكتبات توليد QR Code الداعم للعربية وتصدير الصور والـ PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       نظام عيادة د. صلاح الدين السعيدي | ALSSAEDY CLINIC ERP (Single File PWA)
+       ========================================================================== */
+    :root {
+      --primary-color: #0B2545;
+      --secondary-color: #1d6fa5;
+      --accent-color: #00A8E8;
+      --header-bg: linear-gradient(135deg, #071930 0%, #0B2545 55%, #134074 100%);
+    }
+
+    body.theme-navy { --primary-color: #0B2545; --secondary-color: #1d6fa5; --accent-color: #00A8E8; --header-bg: linear-gradient(135deg, #071930 0%, #0B2545 55%, #134074 100%); }
+    body.theme-emerald { --primary-color: #064e3b; --secondary-color: #047857; --accent-color: #10b981; --header-bg: linear-gradient(135deg, #022c22 0%, #064e3b 55%, #047857 100%); }
+    body.theme-gold { --primary-color: #1e293b; --secondary-color: #b45309; --accent-color: #f59e0b; --header-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #78350f 100%); }
+    body.theme-purple { --primary-color: #3b0764; --secondary-color: #6b21a8; --accent-color: #a855f7; --header-bg: linear-gradient(135deg, #1e0038 0%, #3b0764 55%, #581c87 100%); }
+    body.theme-classic { --primary-color: #18181b; --secondary-color: #3f3f46; --accent-color: #71717a; --header-bg: linear-gradient(135deg, #09090b 0%, #18181b 55%, #27272a 100%); }
+
+    .theme-header { background: var(--header-bg); }
+    .theme-card { background: linear-gradient(135deg, rgba(11, 37, 69, 0.45) 0%, rgba(19, 64, 116, 0.25) 100%); }
+    .theme-badge-primary { background-color: var(--primary-color) !important; }
+    .theme-badge-secondary { background-color: var(--secondary-color) !important; }
+    .theme-footer { background-color: var(--primary-color) !important; }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Cairo', 'Tajawal', sans-serif; background-color: #020617; color: #f1f5f9; overflow-x: hidden; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #091326; }
+    ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 9999px; }
+
+    .nav-tab { color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.2s ease; }
+    .nav-tab:hover { color: #f1f5f9; background-color: rgba(255, 255, 255, 0.05); }
+    .nav-tab.active-tab { color: #38bdf8; background: linear-gradient(180deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.24) 100%); border-bottom: 2px solid var(--accent-color); }
+
+    .service-check-card { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 10px; border-radius: 10px; background-color: #091326; border: 1px solid #1e293b; cursor: pointer; transition: all 0.2s ease; user-select: none; }
+    .service-check-card:hover { border-color: var(--accent-color); background-color: #0f213e; }
+    .service-check-card.selected { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-color: var(--accent-color); box-shadow: 0 0 10px rgba(0, 168, 232, 0.25); }
+
+    .voice-recording-active { background-color: #e11d48 !important; color: #ffffff !important; animation: pulse-voice 1.3s infinite; }
+    @keyframes pulse-voice { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.75); } 70% { box-shadow: 0 0 0 12px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
+
+    #signature-pad-canvas { touch-action: none; user-select: none; }
+    .signature-img-rendered { max-height: 40px !important; max-width: 115px !important; object-fit: contain; margin: 0 auto; display: block; }
+    #receipt-qrcode-container img, #receipt-qrcode-container svg, #receipt-qrcode-container canvas { width: 54px !important; height: 54px !important; display: block; margin: 0 auto; }
+    #printable-receipt-card { font-family: 'Cairo', 'Tajawal', sans-serif; background-color: #ffffff; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .toast-item { animation: slideInToast 0.28s ease forwards; }
+    @keyframes slideInToast { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media print {
+      @page { margin: 5mm; }
+      body { background: #ffffff !important; color: #000000 !important; }
+      header, nav, #ai-smart-bar-container, .lg\:col-span-7, #toast-container, #signature-modal, #image-preview-modal, #inventory-modal, #expense-modal, .no-print, .lg\:col-span-5 > div:first-child { display: none !important; }
+      main, #tab-receipt, .grid, .lg\:col-span-5, #receipt-capture-wrapper { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; position: static !important; }
+      #printable-receipt-card { border: 2px solid var(--primary-color) !important; border-radius: 12px !important; padding: 12px !important; page-break-inside: avoid; }
+      body.print-mode-thermal #printable-receipt-card { max-width: 78mm !important; margin: 0 auto !important; padding: 6px !important; font-size: 10px !important; }
+    }
+  </style>
+</head>
+<body class="theme-navy bg-slate-950 text-slate-100 font-cairo min-h-screen flex flex-col selection:bg-cyan-500 selection:text-white pb-16 md:pb-0">
+
+  <!-- الشريط العلوي -->
+  <header class="theme-header border-b border-cyan-500/30 shadow-2xl sticky top-0 z-40 no-print backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="relative group cursor-pointer" onclick="switchTab('settings')" title="الإعدادات">
+          <img id="main-clinic-logo" src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" class="w-12 h-12 md:w-14 md:h-14 rounded-full object-contain bg-[#071930] p-1 border-2 border-cyan-400/60 shadow-lg" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="header-clinic-ar" class="text-base md:text-lg font-black text-white">عيادة د. صلاح الدين السعيدي</h1>
+            <span class="hidden sm:inline-block text-[11px] bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 px-2 py-0.5 rounded-full font-bold">طب وجراحة الفم والأسنان</span>
+          </div>
+          <p id="header-clinic-en" class="text-[10px] md:text-xs text-cyan-400 font-bold tracking-widest uppercase">ALSSAEDY CLINIC FOR DENTISTRY</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <div id="network-status-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="network-status-text">متصل</span>
+        </div>
+
+        <div class="relative">
+          <select id="quick-model-select" onchange="onQuickModelChange()" class="bg-slate-900/95 border border-cyan-400/50 rounded-full px-3 py-1 text-[11px] font-bold text-cyan-300 outline-none max-w-[220px] sm:max-w-xs truncate">
+            <option value="auto">🤖 التبديل الذكي التلقائي (16 Models)</option>
+            <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="groq:llama-3.3-70b-versatile">Groq: Llama 3.3 70B</option>
+            <option value="openrouter:deepseek/deepseek-r1:free">DeepSeek R1 Free</option>
+            <option value="local">💻 المحرك المحلي (Offline)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bg-slate-950/90 border-t border-slate-800/80">
+      <div class="max-w-7xl mx-auto px-4 flex items-center gap-1 overflow-x-auto py-1 scrollbar-none">
+        <button onclick="switchTab('receipt')" id="tab-btn-receipt" class="nav-tab active-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap">
+          <i class="fa-solid fa-file-invoice-dollar"></i><span>سند قبض</span>
+        </button>
+        <button onclick="switchTab('chat-agent')" id="tab-btn-chat-agent" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap">
+          <i class="fa-solid fa-comments text-cyan-400"></i><span>المساعد الذكي المباشر</span>
+        </button>
+        <button onclick="switchTab('patients')" id="tab-btn-patients" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap">
+          <i class="fa-solid fa-users"></i><span>المرضى والديون</span><span id="nav-debts-count" class="bg-rose-500/20 text-rose-300 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+        <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap">
+          <i class="fa-solid fa-boxes-stacked text-amber-400"></i><span>المخزون والمصروفات</span>
+        </button>
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap">
+          <i class="fa-solid fa-chart-pie"></i><span>التقارير المالية</span>
+        </button>
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap mr-auto">
+          <i class="fa-solid fa-sliders"></i><span>الإعدادات والـ 16 نموذجاً</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- المحتوى الرئيسي -->
+  <main class="max-w-7xl mx-auto w-full px-3 md:px-4 py-4 md:py-6 flex-1 no-print">
+
+    <!-- 1. سند القبض -->
+    <section id="tab-receipt" class="tab-content space-y-5">
+      <div id="ai-smart-bar-container" class="theme-card p-3.5 md:p-4 rounded-2xl border border-cyan-400/30 shadow-lg">
+        <div class="flex flex-col gap-2.5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-xs font-black text-cyan-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles"></i><span>التوجيه الصوتي أو الكتابي الفوري للسند:</span>
+            </span>
+            <span id="active-model-inline-badge" class="text-[10px] bg-slate-900 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30 font-bold">النموذج: تلقائي</span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input type="text" id="ai-quick-input" onkeydown="if(event.key==='Enter') parseReceiptWithSmartAI()" placeholder="مثال: المريض خالد علي رقمه 775123456 عصب وحشوة الإجمالي 30000 دفع 20000 نقد"
+              class="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none" />
+            <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <button type="button" id="btn-voice-record" onclick="toggleVoiceInput('ai-quick-input', true)" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-600 text-white border border-slate-700 transition flex items-center justify-center gap-1.5 text-xs font-bold">
+                <i id="voice-icon" class="fa-solid fa-microphone"></i><span id="voice-label">إملاء صوتي</span>
+              </button>
+              <button type="button" onclick="parseReceiptWithSmartAI()" class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold text-xs shadow-lg transition">
+                <i class="fa-solid fa-bolt ml-1"></i>تنفيذ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <!-- حقول السند -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="theme-badge-primary text-white px-2.5 py-1 rounded-lg font-black">سند قبض رسمي</span>
+              <label class="text-slate-400">رقم السند:</label>
+              <input type="text" id="receipt-no" oninput="updateLivePreview()" class="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-cyan-400 font-bold text-center outline-none" />
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <label class="text-slate-400">التاريخ:</label>
+              <input type="date" id="receipt-date" onchange="updateLivePreview()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-semibold outline-none" />
+              <button type="button" onclick="resetReceiptForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 font-bold">جديد</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1"><i class="fa-solid fa-user-injured text-cyan-400 ml-1"></i>اسم المريض:</label>
+              <input type="text" id="patient-name" list="patients-datalist" oninput="onPatientInput()" placeholder="الاسم الثلاثي..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none" />
+              <datalist id="patients-datalist"></datalist>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1"><i class="fa-solid fa-phone-flip text-cyan-400 ml-1"></i>رقم الهاتف:</label>
+              <input type="tel" id="patient-phone" oninput="onPatientInput()" placeholder="775956520" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-right outline-none" />
+            </div>
+          </div>
+
+          <div id="patient-debt-alert" class="hidden bg-amber-500/10 border border-amber-500/40 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+            <span class="text-amber-200 font-bold">تنبيه: على المريض رصيد متبقٍ سابق قدره: <strong id="previous-debt-amount" class="text-amber-300 underline">0</strong></span>
+            <button type="button" onclick="addPreviousDebtToCurrent()" class="bg-amber-500 text-slate-950 font-black px-2.5 py-1 rounded-lg">دمج بالحساب</button>
+          </div>
+
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span class="text-xs font-black text-cyan-300"><i class="fa-solid fa-tooth"></i> الخدمة العلاجية المقدمة</span>
+              <div class="flex items-center gap-1.5 text-xs">
+                <label class="text-slate-400">رقم السن:</label>
+                <input type="text" id="tooth-numbers" oninput="updateLivePreview()" placeholder="مثال: 36, 46" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-cyan-300 text-center outline-none" />
+              </div>
+            </div>
+            <div id="services-checkbox-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+            <div>
+              <input type="text" id="other-services-note" oninput="updateLivePreview()" placeholder="خدمات أخرى / ملاحظات..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none" />
+            </div>
+          </div>
+
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-3">
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">الإجمالي:</label>
+                <input type="number" id="total-amount" oninput="calculateFinancials()" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 font-black text-white text-center outline-none" />
+              </div>
+              <div>
+                <label class="block font-bold text-emerald-400 mb-1">المدفوع:</label>
+                <input type="number" id="paid-amount" oninput="calculateFinancials()" placeholder="0" class="w-full bg-emerald-950/30 border border-emerald-500/50 rounded-xl px-2.5 py-2 font-black text-emerald-300 text-center outline-none" />
+              </div>
+              <div>
+                <label class="block font-bold text-rose-400 mb-1">المتبقي:</label>
+                <input type="number" id="remaining-amount" readonly value="0" class="w-full bg-rose-950/20 border border-rose-500/30 rounded-xl px-2.5 py-2 font-black text-rose-300 text-center outline-none cursor-not-allowed" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="block font-bold text-slate-400 mb-1">العملة:</label>
+                <div class="flex items-center gap-1.5">
+                  <select id="currency-select" onchange="calculateFinancials()" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold text-white outline-none">
+                    <option value="ريال يمني">ريال يمني (YER)</option>
+                    <option value="ريال سعودي">ريال سعودي (SAR)</option>
+                    <option value="دولار أمريكي">دولار أمريكي (USD)</option>
+                    <option value="أخرى">أخرى</option>
+                  </select>
+                  <input type="text" id="custom-currency-input" oninput="calculateFinancials()" placeholder="العملة" class="hidden w-20 bg-slate-900 border border-cyan-500 rounded-xl px-2 py-1 text-white outline-none" />
+                </div>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-400 mb-1">طريقة الدفع:</label>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="payment-method" value="نقد" checked onchange="onPaymentMethodChange()" class="peer hidden" />
+                    <div class="text-center py-1.5 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-cyan-500/20 peer-checked:border-cyan-400 peer-checked:text-cyan-300 font-bold">نقد</div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="payment-method" value="محفظة / تحويل بنكي" onchange="onPaymentMethodChange()" class="peer hidden" />
+                    <div class="text-center py-1.5 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-cyan-500/20 peer-checked:border-cyan-400 peer-checked:text-cyan-300 font-bold">تحويل/محفظة</div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div id="transfer-ref-container" class="hidden">
+              <label class="block text-xs font-bold text-cyan-300 mb-1">مرجع التحويل:</label>
+              <input type="text" id="transfer-reference" oninput="updateLivePreview()" placeholder="رقم الحوالة..." class="w-full bg-slate-900 border border-cyan-500/50 rounded-xl px-3 py-1.5 text-xs text-white outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1">المبلغ كتابةً (تفقيط تلقائي):</label>
+              <input type="text" id="amount-in-words" oninput="updateLivePreview()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-cyan-200 outline-none" />
+            </div>
+          </div>
+
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-bold text-slate-300"><i class="fa-solid fa-signature text-cyan-400 ml-1"></i>التوقيع باللمس:</span>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="openSignatureModal('receiver')" class="bg-slate-800 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 font-bold">توقيع المريض</button>
+              <button type="button" onclick="openSignatureModal('accountant')" class="bg-slate-800 text-emerald-300 px-3 py-1.5 rounded-lg border border-slate-700 font-bold">توقيع المحاسب/الدكتور</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+            <button type="button" onclick="saveAndPrintReceipt('a5')" class="col-span-2 sm:col-span-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold py-3 px-3 rounded-xl shadow-lg flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-print"></i><span>طباعة A5</span>
+            </button>
+            <button type="button" onclick="saveAndPrintReceipt('thermal')" class="bg-slate-800 text-slate-100 border border-slate-700 font-bold py-3 px-2 rounded-xl flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-receipt text-cyan-400"></i><span>حراري 80mm</span>
+            </button>
+            <button type="button" onclick="exportReceiptAsImageMobile()" class="bg-slate-800 text-slate-100 border border-slate-700 font-bold py-3 px-2 rounded-xl flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-image text-amber-400"></i><span>حفظ صورة HD</span>
+            </button>
+            <button type="button" onclick="sendReceiptViaWhatsApp()" class="col-span-2 sm:col-span-1 bg-emerald-600 text-white font-extrabold py-3 px-3 rounded-xl shadow-lg flex items-center justify-center gap-1.5">
+              <i class="fa-brands fa-whatsapp text-sm"></i><span>واتساب</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- معاينة السند -->
+        <div class="lg:col-span-5 space-y-3 sticky top-24">
+          <div class="flex items-center justify-between px-1 text-xs">
+            <span class="font-bold text-slate-400"><i class="fa-solid fa-eye text-cyan-400"></i> المعاينة الحية (انقر خانة التوقيع للتوقيع المباشر)</span>
+            <button type="button" onclick="saveReceiptOnly()" class="text-emerald-400 font-bold"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+          </div>
+
+          <div id="receipt-capture-wrapper" class="bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden border-2 border-[var(--primary-color)]">
+            <div id="printable-receipt-card" class="p-4 md:p-5 space-y-3 bg-white relative overflow-hidden">
+              <div id="receipt-watermark-overlay" style="opacity: 0.06;" class="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+                <img id="preview-watermark-img" src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" class="w-60 h-60 object-contain" />
+              </div>
+
+              <div class="flex items-center justify-between border-b-2 border-[var(--primary-color)] pb-2.5 gap-2 relative z-10">
+                <div class="text-right">
+                  <h2 id="preview-doctor-ar" class="text-base sm:text-lg font-black text-[var(--primary-color)]">د. صلاح الدين السعيدي</h2>
+                  <p id="preview-specialty-ar" class="text-xs font-bold text-[var(--secondary-color)]">طب وجراحة الفم والأسنان</p>
+                </div>
+                <div class="flex flex-col items-center justify-center shrink-0">
+                  <img id="preview-card-logo" src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" class="w-14 h-14 object-contain" />
+                </div>
+                <div class="text-left" dir="ltr">
+                  <h2 id="preview-clinic-en" class="text-xs sm:text-sm font-black text-[var(--primary-color)] uppercase">ALSSAEDY CLINIC<br/>FOR DENTISTRY</h2>
+                  <p id="preview-doctor-en" class="text-[10px] font-semibold text-[var(--secondary-color)]">Dr. Salahaldeen Alssaedy</p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-0.5 relative z-10">
+                <div class="text-xs font-bold text-[var(--primary-color)]">رقم السند: <span id="preview-receipt-no" class="font-black text-rose-700 underline">1001</span></div>
+                <div class="theme-badge-primary text-white px-5 py-0.5 rounded-full text-xs font-black">سند قبض</div>
+                <div class="text-xs font-bold text-[var(--primary-color)]">التاريخ: <span id="preview-date" dir="ltr" class="font-black">2026/10/16</span></div>
+              </div>
+
+              <div class="space-y-1 text-xs pt-1 relative z-10">
+                <div class="flex items-center justify-between border-b border-dotted border-slate-400 pb-0.5">
+                  <span class="font-extrabold text-[var(--primary-color)]">استلمنا من:</span>
+                  <span id="preview-patient-name" class="font-bold text-slate-900 px-2 flex-1 text-center">................................................</span>
+                  <span class="font-extrabold text-[var(--primary-color)]">المحترم</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-dotted border-slate-400 pb-0.5">
+                  <span class="font-extrabold text-[var(--primary-color)]">رقم الهاتف:</span>
+                  <span id="preview-patient-phone" dir="ltr" class="font-bold text-slate-900 flex-1 text-center">................................................</span>
+                </div>
+              </div>
+
+              <div class="border-2 border-[var(--primary-color)] rounded-xl p-2 bg-slate-50/90 space-y-1.5 text-xs relative z-10">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-extrabold text-[var(--primary-color)]">المبلغ المدفوع:</span>
+                    <span id="preview-paid-top" class="bg-cyan-50 border border-[var(--secondary-color)] rounded px-3 py-0.5 font-black text-sm text-[var(--primary-color)] min-w-[80px] text-center">0</span>
+                  </div>
+                  <div><span class="font-extrabold text-[var(--primary-color)]">العملة: </span><span id="preview-currency" class="font-bold text-[var(--secondary-color)]">ريال يمني</span></div>
+                </div>
+                <div class="border-b border-dotted border-slate-300 pb-1 flex items-center gap-1">
+                  <span class="font-extrabold text-[var(--primary-color)] shrink-0">المبلغ كتابةً:</span>
+                  <span id="preview-amount-words" class="font-bold text-slate-800 text-[11px]">صفر ريال يمني لا غير</span>
+                </div>
+                <div class="flex items-center justify-between pt-0.5">
+                  <div class="flex items-center gap-3">
+                    <span class="font-extrabold text-[var(--primary-color)]">طريقة الدفع:</span>
+                    <span id="preview-method-cash" class="flex items-center gap-1 font-bold"><i class="fa-solid fa-square-check text-[var(--primary-color)]"></i> نقد</span>
+                    <span id="preview-method-transfer" class="flex items-center gap-1 font-bold text-slate-500"><i class="fa-regular fa-square"></i> محفظة/تحويل</span>
+                  </div>
+                </div>
+                <div id="preview-transfer-row" class="hidden border-t border-dotted border-slate-300 pt-1 flex items-center gap-1">
+                  <span class="font-extrabold text-[var(--primary-color)] shrink-0">مرجع التحويل:</span>
+                  <span id="preview-transfer-ref" class="font-bold text-slate-700">................................................</span>
+                </div>
+              </div>
+
+              <div class="border-2 border-[var(--secondary-color)] rounded-xl p-2.5 pt-3.5 relative mt-3 z-10">
+                <div class="absolute -top-2.5 left-1/2 -translate-x-1/2 theme-badge-secondary text-white text-[10px] font-extrabold px-3 py-0.5 rounded-full whitespace-nowrap">تفاصيل الخدمة العلاجية المقدمة</div>
+                <div id="preview-services-grid" class="grid grid-cols-3 gap-y-1 gap-x-1.5 text-[10px] font-bold text-[var(--primary-color)] pt-1"></div>
+                <div class="mt-1.5 bg-slate-100 rounded px-2 py-0.5 text-[10px] flex items-center justify-between gap-2">
+                  <div class="truncate"><span class="font-extrabold text-[var(--primary-color)]">خدمات أخرى: </span><span id="preview-other-services" class="font-semibold text-slate-800">........................................</span></div>
+                  <div id="preview-tooth-badge" class="hidden shrink-0 theme-badge-primary text-white px-1.5 py-0.2 rounded text-[9px] font-bold">السن: <span id="preview-tooth-val"></span></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1.5 pt-0.5 text-center relative z-10">
+                <div class="bg-slate-200/75 border border-slate-300 rounded-lg p-1">
+                  <div class="text-[10px] font-extrabold text-[var(--primary-color)]">الإجمالي</div>
+                  <div id="preview-total-box" class="bg-white rounded py-0.5 font-black text-xs text-[var(--primary-color)]">0</div>
+                </div>
+                <div class="bg-slate-200/75 border border-slate-300 rounded-lg p-1">
+                  <div class="text-[10px] font-extrabold text-[var(--primary-color)]">المدفوع</div>
+                  <div id="preview-paid-box" class="bg-white rounded py-0.5 font-black text-xs text-emerald-700">0</div>
+                </div>
+                <div class="bg-slate-200/75 border border-slate-300 rounded-lg p-1">
+                  <div class="text-[10px] font-extrabold text-[var(--primary-color)]">المتبقي</div>
+                  <div id="preview-remaining-box" class="bg-white rounded py-0.5 font-black text-xs text-rose-700">0</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 items-end pt-1 text-center text-[10px] font-extrabold text-[var(--primary-color)] relative z-10">
+                <div onclick="openSignatureModal('receiver')" class="cursor-pointer hover:bg-slate-100 rounded p-0.5 transition">
+                  <p class="mb-1">توقيع المستلم</p>
+                  <div id="preview-signature-receiver" class="h-11 flex items-center justify-center border-b border-dotted border-slate-400"><span class="text-slate-400 font-normal">إضغط للتوقيع</span></div>
+                </div>
+                <div class="flex flex-col items-center justify-center">
+                  <div id="receipt-qrcode-container" class="p-1 bg-white border border-slate-300 rounded flex items-center justify-center min-w-[56px] min-h-[56px]"></div>
+                </div>
+                <div onclick="openSignatureModal('accountant')" class="cursor-pointer hover:bg-slate-100 rounded p-0.5 transition">
+                  <p class="mb-1">توقيع المحاسب</p>
+                  <div id="preview-signature-accountant" class="h-11 flex items-center justify-center border-b border-dotted border-slate-400"><span class="text-slate-400 font-normal">إضغط للتوقيع</span></div>
+                </div>
+              </div>
+
+              <div class="theme-footer text-white rounded-xl p-2 text-center space-y-0.5 relative z-10">
+                <div class="flex items-center justify-center gap-1.5 text-[11px] font-bold"><i class="fa-solid fa-location-dot text-cyan-400"></i><span id="preview-address">ريمة - كسمة - عزلة الضبارة</span></div>
+                <div class="flex items-center justify-center gap-2 text-[10px] font-bold" dir="ltr"><i class="fa-solid fa-phone text-cyan-400"></i><span id="preview-phones">+967 716 339 366 | +967 739 550 138 | +967 775 956 520</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. المساعد الذكي المباشر -->
+    <section id="tab-chat-agent" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 flex flex-col h-[78vh] shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300"><i class="fa-solid fa-robot text-lg"></i></div>
+            <div>
+              <h2 class="text-sm font-black text-white flex items-center gap-2"><span>المساعد التنفيذي لبيانات العيادة</span><span id="chat-last-model-badge" class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">جاهز</span></h2>
+              <p class="text-[11px] text-slate-400">مرتبط بكافة السندات، الديون، المخزون، والمصروفات.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <label class="flex items-center gap-1.5 bg-slate-950 border border-slate-700 px-3 py-1.5 rounded-lg cursor-pointer">
+              <input type="checkbox" id="chat-auto-tts-toggle" checked class="accent-cyan-500 w-3.5 h-3.5" /><span class="text-cyan-300 font-bold"><i class="fa-solid fa-volume-high ml-1"></i>قراءة صوتية</span>
+            </label>
+            <button type="button" onclick="clearChatMessages()" class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">مسح</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 overflow-x-auto py-2 border-b border-slate-800/60 scrollbar-none text-[11px]">
+          <button type="button" onclick="sendQuickChatPrompt('راجع جميع السندات المسجلة وأعطني تقريراً مفصلاً عن الإيرادات والديون المتبقية')" class="bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-full whitespace-nowrap font-bold">📊 مراجعة السندات والديون</button>
+          <button type="button" onclick="sendQuickChatPrompt('افحص المخزون الحالي والمصروفات وأعطني تنبيهات بالمواد الناقصة وصافي الربح')" class="bg-slate-950 hover:bg-slate-800 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-full whitespace-nowrap font-bold">📦 فحص المخزون والمصروفات</button>
+        </div>
+
+        <div id="chat-messages-container" class="flex-1 overflow-y-auto space-y-3 p-3">
+          <div class="flex items-start gap-2.5 max-w-[90%]">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0 text-xs"><i class="fa-solid fa-robot"></i></div>
+            <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tr-none p-3 text-xs text-slate-200 leading-relaxed shadow">
+              أهلاً بك يا دكتور! أنا متصل بكل سجلات العيادة. يمكنك سؤالي أو توجيهي مثل:<br/>
+              • <strong>"نفذ سند للمريض سامي رقمه 775123456 بمبلغ 20000 دفع 15000 نقد خلع"</strong><br/>
+              • <strong>"ما هي المواد التي أوشكت على النفاد في المخزون؟"</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-800 pt-3 flex items-center gap-2">
+          <input type="text" id="chat-input-text" onkeydown="if(event.key==='Enter') sendChatMessage()" placeholder="اكتب أمرك أو سؤالك هنا..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white outline-none" />
+          <button type="button" onclick="toggleVoiceInput('chat-input-text', false)" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-600 text-white border border-slate-700 text-xs font-bold"><i class="fa-solid fa-microphone"></i></button>
+          <button type="button" onclick="sendChatMessage()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs shadow-lg"><i class="fa-solid fa-paper-plane ml-1"></i>إرسال</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. المخزون والمصروفات -->
+    <section id="tab-inventory" class="tab-content hidden space-y-5">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5">
+          <p class="text-slate-400 font-bold">إجمالي أصناف المخزون</p>
+          <h3 id="inv-stat-total-items" class="text-xl font-black text-white mt-1">0</h3>
+        </div>
+        <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-3.5">
+          <p class="text-amber-400 font-bold">مواد أوشكت على النفاد</p>
+          <h3 id="inv-stat-low-stock" class="text-xl font-black text-amber-300 mt-1">0</h3>
+        </div>
+        <div class="bg-slate-900 border border-rose-500/40 rounded-2xl p-3.5">
+          <p class="text-rose-400 font-bold">إجمالي المصروفات</p>
+          <h3 id="inv-stat-total-expenses" class="text-xl font-black text-rose-300 mt-1">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-4 space-y-3 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-black text-amber-300 text-sm"><i class="fa-solid fa-magnifying-glass-chart ml-1"></i>تقرير المخزون والمصروفات بالذكاء الاصطناعي</span>
+          <button type="button" onclick="runInventoryAuditAI()" class="bg-amber-500 text-slate-950 font-black px-4 py-2 rounded-xl">فحص المخزون والربحية الآن</button>
+        </div>
+        <div id="inventory-ai-summary" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-slate-200 leading-relaxed whitespace-pre-wrap">اضغط على الزر أعلاه لفحص المخزون والربحية.</div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-white"><i class="fa-solid fa-boxes-stacked text-amber-400 ml-1"></i>المخزون</h3>
+            <button type="button" onclick="openInventoryModal()" class="text-xs bg-cyan-600 text-white px-3 py-1.5 rounded-lg font-bold">إضافة مادة</button>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-950 text-slate-300 font-bold">
+                <tr><th class="p-2.5">المادة</th><th class="p-2.5">الكمية</th><th class="p-2.5">الحد الأدنى</th><th class="p-2.5">الحالة</th><th class="p-2.5 text-center">تحكم</th></tr>
+              </thead>
+              <tbody id="inventory-table-body" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-white"><i class="fa-solid fa-money-bill-transfer text-rose-400 ml-1"></i>المصروفات</h3>
+            <button type="button" onclick="openExpenseModal()" class="text-xs bg-rose-600 text-white px-3 py-1.5 rounded-lg font-bold">تسجيل مصروف</button>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-950 text-slate-300 font-bold">
+                <tr><th class="p-2.5">البيان</th><th class="p-2.5">المبلغ</th><th class="p-2.5">التاريخ</th><th class="p-2.5 text-center">حذف</th></tr>
+              </thead>
+              <tbody id="expenses-table-body" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. المرضى والديون -->
+    <section id="tab-patients" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-black text-white"><i class="fa-solid fa-users text-cyan-400 ml-1"></i>سجل السندات والمرضى والديون</h2>
+            <p class="text-xs text-slate-400">ابحث عن أي مريض، سدّد الديون، أو استمع للتقرير الصوتي للسند.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <input type="text" id="search-records-input" oninput="renderRecordsTable()" placeholder="بحث بالاسم أو الهاتف..." class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none w-56" />
+            <select id="filter-records-debt" onchange="renderRecordsTable()" class="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 font-bold text-slate-200 outline-none">
+              <option value="all">جميع السندات</option>
+              <option value="debt">الديون المتبقية فقط</option>
+              <option value="paid">المسدد بالكامل</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#0B2545] text-cyan-300 font-extrabold uppercase">
+              <tr><th class="p-2.5">رقم</th><th class="p-2.5">التاريخ</th><th class="p-2.5">المريض</th><th class="p-2.5">الهاتف</th><th class="p-2.5">الخدمات</th><th class="p-2.5">الإجمالي</th><th class="p-2.5">المدفوع</th><th class="p-2.5">المتبقي</th><th class="p-2.5 text-center">إجراءات</th></tr>
+            </thead>
+            <tbody id="records-table-body" class="divide-y divide-slate-800 bg-slate-950/60"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. التقارير المالية -->
+    <section id="tab-dashboard" class="tab-content hidden space-y-5">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5"><p class="text-slate-400 font-bold">السندات</p><h3 id="stat-total-receipts" class="text-xl font-black text-white mt-1">0</h3></div>
+        <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-3.5"><p class="text-emerald-400 font-bold">المقبوضات</p><h3 id="stat-total-paid" class="text-xl font-black text-emerald-300 mt-1">0</h3></div>
+        <div class="bg-slate-900 border border-rose-500/30 rounded-2xl p-3.5"><p class="text-rose-400 font-bold">الديون</p><h3 id="stat-total-debt" class="text-xl font-black text-rose-300 mt-1">0</h3></div>
+        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-3.5"><p class="text-amber-400 font-bold">المصروفات</p><h3 id="stat-total-expenses" class="text-xl font-black text-amber-300 mt-1">0</h3></div>
+        <div class="col-span-2 lg:col-span-1 bg-slate-900 border border-cyan-500/40 rounded-2xl p-3.5"><p class="text-cyan-400 font-bold">صافي الربح</p><h3 id="stat-net-profit" class="text-xl font-black text-cyan-200 mt-1">0</h3></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-sm font-black text-white"><i class="fa-solid fa-chart-line text-cyan-400 ml-1"></i>التقرير المالي والتشغيلي الشامل</h3>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="speakText(document.getElementById('ai-financial-report').innerText)" class="bg-slate-800 text-cyan-300 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700"><i class="fa-solid fa-volume-high ml-1"></i>قراءة صوتية</button>
+            <button type="button" onclick="generateComprehensiveFinancialReport()" class="bg-cyan-600 text-white text-xs font-bold px-4 py-1.5 rounded-xl"><i class="fa-solid fa-wand-magic-sparkles ml-1"></i>توليد تقرير شامل</button>
+          </div>
+        </div>
+        <div id="ai-financial-report" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap min-h-[160px]">اضغط على توليد تقرير شامل.</div>
+      </div>
+    </section>
+
+    <!-- 6. الإعدادات -->
+    <section id="tab-settings" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+        <h3 class="text-sm font-black text-white border-b border-slate-800 pb-2"><i class="fa-solid fa-palette text-cyan-400 ml-1"></i>تخصيص الثيمات، الشعار، والعلامة المائية</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1.5">اختر الثيم:</label>
+            <select id="cfg-theme-select" onchange="applySelectedTheme(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold outline-none">
+              <option value="navy">الأزرق الملكي (الرسمي)</option>
+              <option value="emerald">الأخضر الزمردي الطبي</option>
+              <option value="gold">الذهبي الفخم</option>
+              <option value="purple">البنفسجي العصرى</option>
+              <option value="classic">الرمادي الكلاسيكي</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1.5">رفع شعار جديد:</label>
+            <label class="w-full bg-slate-950 border border-slate-700 hover:border-cyan-400 rounded-xl px-3 py-2 text-cyan-300 flex items-center justify-center gap-1.5 cursor-pointer font-bold">
+              <i class="fa-solid fa-upload"></i><span>اختيار صورة شعار</span>
+              <input type="file" accept="image/*" onchange="uploadCustomLogo(event)" class="hidden" />
+            </label>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5 font-bold"><span class="text-slate-300">شفافية العلامة المائية:</span><span id="watermark-opacity-val" class="text-cyan-400">6%</span></div>
+            <input type="range" id="cfg-watermark-opacity" min="0" max="35" value="6" oninput="changeWatermarkOpacity(this.value)" class="w-full accent-cyan-500" />
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-black text-white"><i class="fa-solid fa-microchip text-cyan-400 ml-1"></i>مصفوفة النماذج الـ 16 المجانية والاكتشاف التلقائي</h3>
+            <p class="text-xs text-slate-400">أدخل مفاتيحك واضغط فحص النماذج.</p>
+          </div>
+          <button type="button" onclick="testAndDiscoverAllModels()" class="bg-cyan-500 text-slate-950 text-xs font-black px-4 py-2 rounded-xl shadow-lg">فحص واكتشاف النماذج</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between font-bold"><span class="text-cyan-300">Gemini Key:</span><span id="dot-gemini" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">غير مفحوص</span></div>
+            <input type="password" id="cfg-gemini-key" placeholder="AIzaSy..." dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white outline-none" />
+          </div>
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between font-bold"><span class="text-amber-400">Groq Key:</span><span id="dot-groq" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">غير مفحوص</span></div>
+            <input type="password" id="cfg-groq-key" placeholder="gsk_..." dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white outline-none" />
+          </div>
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between font-bold"><span class="text-purple-400">OpenRouter Key:</span><span id="dot-openrouter" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">غير مفحوص</span></div>
+            <input type="password" id="cfg-openrouter-key" placeholder="sk-or-v1-..." dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white outline-none" />
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-80 overflow-y-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950 text-slate-300 font-bold sticky top-0">
+              <tr><th class="p-2.5">#</th><th class="p-2.5">المزود</th><th class="p-2.5">النموذج</th><th class="p-2.5">التخصص</th><th class="p-2.5">الحالة</th><th class="p-2.5 text-center">تحديد</th></tr>
+            </thead>
+            <tbody id="models-matrix-table-body" class="divide-y divide-slate-800 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 text-xs">
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-3">
+          <h3 class="text-sm font-black text-white border-b border-slate-800 pb-2">بيانات العيادة</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div><label class="block text-slate-400 mb-1">اسم الطبيب:</label><input type="text" id="cfg-doctor-ar" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+            <div><label class="block text-slate-400 mb-1">التخصص:</label><input type="text" id="cfg-specialty-ar" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+            <div><label class="block text-slate-400 mb-1">العيادة (EN):</label><input type="text" id="cfg-clinic-en" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+            <div><label class="block text-slate-400 mb-1">الطبيب (EN):</label><input type="text" id="cfg-doctor-en" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+            <div class="sm:col-span-2"><label class="block text-slate-400 mb-1">العنوان:</label><input type="text" id="cfg-address" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+            <div class="sm:col-span-2"><label class="block text-slate-400 mb-1">الهواتف:</label><input type="text" id="cfg-phones" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" /></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+          <h3 class="text-sm font-black text-white border-b border-slate-800 pb-2">التحكم والنسخ السحابي</h3>
+          <div class="space-y-2">
+            <label class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer"><span>شريط الإملاء الصوتي</span><input type="checkbox" id="cfg-toggle-aibar" checked class="w-4 h-4 accent-cyan-500" /></label>
+            <label class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer"><span>الحساب التلقائي للأسعار</span><input type="checkbox" id="cfg-toggle-autoprice" class="w-4 h-4 accent-cyan-500" /></label>
+            <label class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer"><span>توليد QR Code</span><input type="checkbox" id="cfg-toggle-qrcode" checked class="w-4 h-4 accent-cyan-500" /></label>
+            <label class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer"><span>خصم المخزون تلقائياً</span><input type="checkbox" id="cfg-toggle-autoinventory" checked class="w-4 h-4 accent-cyan-500" /></label>
+          </div>
+
+          <div class="border-t border-slate-800 pt-3 space-y-2">
+            <label class="block font-bold text-cyan-300">النسخ السحابي (Cloud Sync):</label>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="password" id="cfg-cloud-key" placeholder="JSONBin Key" dir="ltr" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs" />
+              <input type="text" id="cfg-cloud-bin" placeholder="Bin ID" dir="ltr" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 text-xs" />
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onclick="syncDataToCloud()" class="bg-cyan-600 text-white font-bold py-2 rounded-xl">رفع للسحابة</button>
+              <button type="button" onclick="syncDataFromCloud()" class="bg-slate-800 text-cyan-300 border border-slate-700 font-bold py-2 rounded-xl">استعادة من السحابة</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-black text-white">إدارة الخدمات العلاجية وأسعارها</h3>
+          <button type="button" onclick="addNewServiceRow()" class="text-xs bg-slate-800 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 font-bold">إضافة خدمة</button>
+        </div>
+        <div id="settings-services-list" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+        <div class="pt-2">
+          <button type="button" onclick="saveAllSettings()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black py-3 rounded-xl shadow-lg text-xs">حفظ وتطبيق كافة الإعدادات</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- النوافذ المنبثقة -->
+  <div id="signature-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+    <div class="bg-slate-900 border border-cyan-500/40 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2"><h3 id="signature-modal-title" class="text-sm font-black text-white">التوقيع باللمس</h3><button type="button" onclick="closeSignatureModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+      <div class="border-2 border-cyan-500/50 rounded-xl overflow-hidden bg-white touch-none"><canvas id="signature-pad-canvas" width="380" height="170" class="w-full h-44 cursor-crosshair block"></canvas></div>
+      <div class="flex items-center justify-between text-xs pt-1">
+        <button type="button" onclick="clearSignatureCanvas()" class="text-rose-400 font-bold">مسح</button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="saveAsPermanentSignature()" class="bg-slate-800 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 font-bold text-[11px]">حفظ دائم</button>
+          <button type="button" onclick="applySignatureToReceipt()" class="bg-cyan-500 text-slate-950 font-black px-4 py-1.5 rounded-lg">اعتماد</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-preview-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 no-print">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-4 space-y-3 shadow-2xl max-h-[95vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2"><h3 class="text-sm font-black text-white">معاينة صورة السند (HD)</h3><button type="button" onclick="closeImagePreviewModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+      <div class="flex-1 overflow-auto flex items-center justify-center p-2 bg-slate-950 rounded-xl"><img id="generated-receipt-img" src="" class="max-w-full max-h-[55vh] object-contain rounded" /></div>
+      <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
+        <button type="button" onclick="shareGeneratedReceiptImage()" class="bg-emerald-600 text-white font-extrabold py-2.5 rounded-xl">مشاركة / بالمعرض</button>
+        <button type="button" onclick="triggerBlobDownload()" class="bg-cyan-600 text-white font-extrabold py-2.5 rounded-xl">تنزيل مباشر</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="inventory-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-4 space-y-3 text-xs">
+      <h3 class="text-sm font-black text-white border-b border-slate-800 pb-2">إضافة مادة للمخزون</h3>
+      <div><label class="block text-slate-400 mb-1">اسم المادة:</label><input type="text" id="inv-item-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" /></div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="block text-slate-400 mb-1">الكمية:</label><input type="number" id="inv-item-qty" value="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" /></div>
+        <div><label class="block text-slate-400 mb-1">حد التنبيه:</label><input type="number" id="inv-item-min" value="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" /></div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeInventoryModal()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-lg">إلغاء</button><button type="button" onclick="saveInventoryItemFromModal()" class="bg-cyan-500 text-slate-950 font-black px-4 py-2 rounded-lg">حفظ</button></div>
+    </div>
+  </div>
+
+  <div id="expense-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 no-print">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-4 space-y-3 text-xs">
+      <h3 class="text-sm font-black text-white border-b border-slate-800 pb-2">تسجيل مصروف للعيادة</h3>
+      <div><label class="block text-slate-400 mb-1">بيان المصروف:</label><input type="text" id="exp-item-title" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" /></div>
+      <div><label class="block text-slate-400 mb-1">المبلغ:</label><input type="number" id="exp-item-amount" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" /></div>
+      <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeExpenseModal()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-lg">إلغاء</button><button type="button" onclick="saveExpenseFromModal()" class="bg-rose-600 text-white font-black px-4 py-2 rounded-lg">حفظ</button></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-5 left-5 z-50 space-y-2 no-print"></div>
+
+  <!-- سكربتات التطبيق المتكاملة -->
+  <script>
+    /* ==================== CORE & STORAGE ==================== */
+    const STORAGE_KEYS = { SETTINGS: 'alssaedy_erp_s_v2', RECEIPTS: 'alssaedy_erp_r_v2', INVENTORY: 'alssaedy_erp_i_v2', EXPENSES: 'alssaedy_erp_e_v2' };
+
+    window.AI_MODELS_CATALOG = [
+      { id: 'gemini:gemini-2.5-flash', provider: 'gemini', model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', specialty: 'الأذكى والأسرع لتعبئة السندات', status: 'جاهز' },
+      { id: 'gemini:gemini-2.0-flash', provider: 'gemini', model: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', specialty: 'استجابة فورية للمحادثة', status: 'جاهز' },
+      { id: 'groq:llama-3.3-70b-versatile', provider: 'groq', model: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', specialty: 'فائق السرعة وفهم الأوامر', status: 'جاهز' },
+      { id: 'groq:llama-3.1-8b-instant', provider: 'groq', model: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', specialty: 'سرعة لحظية لإدخال السندات', status: 'جاهز' },
+      { id: 'openrouter:deepseek/deepseek-r1:free', provider: 'openrouter', model: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 (Free)', specialty: 'تفكير منطقي ومالي متقدم', status: 'جاهز' },
+      { id: 'openrouter:qwen/qwen-2.5-72b-instruct:free', provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct:free', name: 'Qwen 2.5 72B (Free)', specialty: 'الأقوى في العربية الفصيحة', status: 'جاهز' }
+    ];
+
+    const DEFAULT_SETTINGS = {
+      clinic: { doctorAr: 'د. صلاح الدين السعيدي', specialtyAr: 'طب وجراحة الفم والأسنان', clinicEn: 'ALSSAEDY CLINIC FOR DENTISTRY', doctorEn: 'Dr. Salahaldeen Alssaedy', address: 'ريمة - كسمة - عزلة الضبارة', phones: '+967 716 339 366 | +967 739 550 138 | +967 775 956 520' },
+      appearance: { theme: 'navy', customLogoDataUrl: '', watermarkOpacity: 6, permanentAccountantSig: '' },
+      ai: { selectedMode: 'auto', geminiKey: '', groqKey: '', openrouterKey: '' },
+      cloud: { apiKey: '', binId: '' },
+      features: { showAiBar: true, autoPrice: false, showQrCode: true, debtAlert: true, autoInventory: true },
+      services: [
+        { id: 'srv_exam', name: 'كشف ومعاينة', price: 2000, keywords: ['كشف', 'معاينة', 'فحص'] },
+        { id: 'srv_fill', name: 'حشوات وتجميل', price: 8000, keywords: ['حشو', 'حشوة', 'حشوات', 'تجميل'] },
+        { id: 'srv_endo', name: 'علاج عصب وجذور', price: 15000, keywords: ['عصب', 'جذور', 'سحب عصب'] },
+        { id: 'srv_extr', name: 'خلع وجراحة', price: 5000, keywords: ['خلع', 'قلع', 'جراحة'] },
+        { id: 'srv_scal', name: 'تنظيف وتجليح لثة', price: 10000, keywords: ['تنظيف', 'تجليح', 'لثة'] },
+        { id: 'srv_pros', name: 'تركيبات أسنان', price: 35000, keywords: ['تركيب', 'تركيبات', 'تلبيس'] },
+        { id: 'srv_orth', name: 'تقويم أسنان', price: 150000, keywords: ['تقويم', 'شد تقويم'] },
+        { id: 'srv_xray', name: 'أشعة تشخيصية', price: 3000, keywords: ['أشعة', 'اشعة', 'بانوراما'] }
+      ]
+    };
+
+    const DEFAULT_INVENTORY = [
+      { id: 'inv_1', name: 'أمبولات بنج أسنان (Lidocaine)', qty: 45, minQty: 15, linkedService: 'خلع وجراحة' },
+      { id: 'inv_2', name: 'حشوات ضوئية كومبوزيت', qty: 12, minQty: 4, linkedService: 'حشوات وتجميل' },
+      { id: 'inv_3', name: 'مبارد وأقماع عصب', qty: 18, minQty: 6, linkedService: 'علاج عصب وجذور' },
+      { id: 'inv_4', name: 'قفازات وكمامات (طقم فحص)', qty: 80, minQty: 20, linkedService: 'كشف ومعاينة' }
+    ];
+
+    function loadFromStorage(k, fb) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : structuredClone(fb); } catch(e) { return structuredClone(fb); } }
+
+    window.AppState = {
+      settings: loadFromStorage(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS),
+      receipts: loadFromStorage(STORAGE_KEYS.RECEIPTS, []),
+      inventory: loadFromStorage(STORAGE_KEYS.INVENTORY, DEFAULT_INVENTORY),
+      expenses: loadFromStorage(STORAGE_KEYS.EXPENSES, []),
+      selectedServices: new Set(),
+      currentPreviousDebt: 0,
+      editingReceiptId: null,
+      currentReceiverSig: '',
+      currentAccountantSig: ''
+    };
+
+    window.saveSettingsState = () => localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(window.AppState.settings));
+    window.saveReceiptsState = () => localStorage.setItem(STORAGE_KEYS.RECEIPTS, JSON.stringify(window.AppState.receipts));
+    window.saveInventoryState = () => localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(window.AppState.inventory));
+    window.saveExpensesState = () => localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(window.AppState.expenses));
+
+    window.ClinicDB = {
+      getNextReceiptNumber() {
+        const list = window.AppState.receipts || [];
+        if (list.length === 0) return '1001';
+        let maxNo = 1000;
+        list.forEach(i => { const n = parseInt(String(i.receiptNo).replace(/\D/g, ''), 10); if (!isNaN(n) && n > maxNo) maxNo = n; });
+        return String(maxNo + 1);
+      },
+      saveReceipt(data) {
+        const list = window.AppState.receipts;
+        const idx = list.findIndex(r => r.id === data.id || String(r.receiptNo) === String(data.receiptNo));
+        if (idx > -1) { list[idx] = { ...list[idx], ...data }; }
+        else {
+          list.unshift({ ...data, id: data.id || 'REC_' + Date.now(), createdAt: new Date().toISOString() });
+          if (window.AppState.settings.features.autoInventory && Array.isArray(data.services)) {
+            this.deductInventoryForServices(data.services);
+          }
+        }
+        saveReceiptsState();
+        return data;
+      },
+      deleteReceipt(id) { window.AppState.receipts = window.AppState.receipts.filter(r => r.id !== id); saveReceiptsState(); },
+      settleReceiptDebt(id, addPaid) {
+        const list = window.AppState.receipts;
+        const idx = list.findIndex(r => r.id === id);
+        if (idx === -1) return null;
+        const rec = list[idx];
+        const newPaid = (Number(rec.paidAmount) || 0) + (Number(addPaid) || 0);
+        const newRem = Math.max(0, (Number(rec.totalAmount) || 0) - newPaid);
+        list[idx] = { ...rec, paidAmount: newPaid, remainingAmount: newRem, amountWords: window.numberToArabicWords(newPaid, rec.currency || 'ريال يمني') };
+        saveReceiptsState();
+        return list[idx];
+      },
+      getPatientDebtSummary(name, phone) {
+        const cN = (name || '').trim(); const cP = (phone || '').replace(/\D/g, '');
+        if (!cN && !cP) return { totalDebt: 0 };
+        const matches = window.AppState.receipts.filter(r => {
+          if ((Number(r.remainingAmount) || 0) <= 0) return false;
+          return (cN && r.patientName?.trim() === cN) || (cP && r.patientPhone?.replace(/\D/g, '').endsWith(cP.slice(-7)));
+        });
+        return { totalDebt: matches.reduce((s, r) => s + (Number(r.remainingAmount) || 0), 0) };
+      },
+      getUniquePatients() {
+        const m = new Map();
+        window.AppState.receipts.forEach(r => { if (r.patientName && !m.has(r.patientName.trim())) m.set(r.patientName.trim(), r.patientPhone || ''); });
+        return Array.from(m.entries()).map(([name, phone]) => ({ name, phone }));
+      },
+      deductInventoryForServices(servicesList) {
+        window.AppState.inventory.forEach(i => {
+          if (servicesList.includes(i.linkedService) || i.linkedService === 'كشف ومعاينة') {
+            if (i.qty > 0) i.qty -= 1;
+          }
+        });
+        saveInventoryState();
+      },
+      addInventoryItem(name, qty, min) {
+        window.AppState.inventory.push({ id: 'inv_' + Date.now(), name: name.trim(), qty: Number(qty) || 0, minQty: Number(min) || 2, linkedService: '' });
+        saveInventoryState();
+      },
+      updateInventoryQty(id, delta) {
+        const item = window.AppState.inventory.find(i => i.id === id);
+        if (item) { item.qty = Math.max(0, (Number(item.qty) || 0) + delta); saveInventoryState(); }
+      },
+      deleteInventoryItem(id) { window.AppState.inventory = window.AppState.inventory.filter(i => i.id !== id); saveInventoryState(); },
+      addExpense(title, amount) {
+        window.AppState.expenses.unshift({ id: 'exp_' + Date.now(), title: title.trim(), amount: Number(amount) || 0, date: new Date().toISOString().slice(0, 10) });
+        saveExpensesState();
+      },
+      deleteExpense(id) { window.AppState.expenses = window.AppState.expenses.filter(e => e.id !== id); saveExpensesState(); },
+      buildClinicFullContext() {
+        const receipts = window.AppState.receipts || [];
+        const inventory = window.AppState.inventory || [];
+        const expenses = window.AppState.expenses || [];
+        const totalRev = receipts.reduce((s, r) => s + (Number(r.paidAmount) || 0), 0);
+        const totalDebts = receipts.reduce((s, r) => s + (Number(r.remainingAmount) || 0), 0);
+        const totalExp = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        return {
+          stats: { totalReceiptsCount: receipts.length, totalCollectedRevenue: totalRev, totalPendingDebts: totalDebts, totalExpenses: totalExp, netProfit: totalRev - totalExp },
+          inventoryStatus: inventory.map(i => ({ name: i.name, qty: i.qty, status: i.qty <= i.minQty ? 'ناقص' : 'متوفر' })),
+          lowStockAlerts: inventory.filter(i => i.qty <= i.minQty).map(i => i.name)
+        };
+      }
+    };
+
+    /* ==================== NUMBER TO ARABIC WORDS ==================== */
+    function convertUnderThousand(n) {
+      const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+      const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+      const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+      const p = []; const h = Math.floor(n / 100); const rem = n % 100;
+      if (h > 0) p.push(hundreds[h]);
+      if (rem > 0) {
+        if (rem < 20) p.push(ones[rem]);
+        else { const u = rem % 10; const t = Math.floor(rem / 10); p.push(u > 0 ? `${ones[u]} و${tens[t]}` : tens[t]); }
+      }
+      return p.join(' و');
+    }
+
+    window.numberToArabicWords = function(amount, currency = 'ريال يمني') {
+      const num = Math.floor(Math.abs(Number(amount) || 0));
+      if (num === 0) return `صفر ${currency} لا غير`;
+      const mil = Math.floor(num / 1000000); const tho = Math.floor((num % 1000000) / 1000); const rem = num % 1000;
+      const segs = [];
+      if (mil > 0) segs.push(mil === 1 ? 'مليون' : mil === 2 ? 'مليونان' : `${convertUnderThousand(mil)} مليون`);
+      if (tho > 0) segs.push(tho === 1 ? 'ألف' : tho === 2 ? 'ألفان' : `${convertUnderThousand(tho)} ألف`);
+      if (rem > 0) segs.push(convertUnderThousand(rem));
+      return `فقط ${segs.join(' و')} ${currency} لا غير`;
+    };
+
+    /* ==================== AI ROUTER & CHAT AGENT ==================== */
+    window.callAI = async function(prompt, systemPrompt) {
+      const s = window.AppState.settings;
+      const mode = s.ai.selectedMode || 'auto';
+      if (mode === 'local') return { result: callLocalOfflineAI(prompt, systemPrompt), provider: 'محرك محلي' };
+
+      if (mode !== 'auto' && mode.includes(':')) {
+        const [prov, mod] = mode.split(':');
+        try { return { result: await callProviderModel(prov, mod, prompt, systemPrompt), provider: prov.toUpperCase() }; } catch(e) {}
+      }
+
+      for (const m of window.AI_MODELS_CATALOG) {
+        const key = m.provider === 'gemini' ? s.ai.geminiKey : m.provider === 'groq' ? s.ai.groqKey : s.ai.openrouterKey;
+        if (!key) continue;
+        try { const res = await callProviderModel(m.provider, m.model, prompt, systemPrompt); return { result: res, provider: m.name }; } catch(e) {}
+      }
+      return { result: callLocalOfflineAI(prompt, systemPrompt), provider: 'محرك محلي (طوارئ)' };
+    };
+
+    async function callProviderModel(prov, model, prompt, sys) {
+      const s = window.AppState.settings;
+      if (prov === 'gemini') {
+        const key = s.ai.geminiKey; if (!key) throw new Error();
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\n\n${prompt}` }] }] })
+        });
+        const data = await res.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+      if (prov === 'groq' || prov === 'openrouter') {
+        const key = prov === 'groq' ? s.ai.groqKey : s.ai.openrouterKey; if (!key) throw new Error();
+        const url = prov === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+        const res = await fetch(url, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: sys || 'مساعد طبي' }, { role: 'user', content: prompt }] })
+        });
+        const data = await res.json(); return data.choices?.[0]?.message?.content || '';
+      }
+      throw new Error();
+    }
+
+    function callLocalOfflineAI(text, sys) {
+      if (sys && sys.includes('المساعد التنفيذي')) {
+        const c = window.ClinicDB.buildClinicFullContext();
+        return `تقرير محلي: إجمالي السندات (${c.stats.totalReceiptsCount})، المقبوضات (${c.stats.totalCollectedRevenue} ر.ي)، الديون (${c.stats.totalPendingDebts} ر.ي)، صافي الربح (${c.stats.netProfit} ر.ي).`;
+      }
+      const nums = (text || '').match(/\d+/g) || [];
+      const tot = nums[0] ? parseInt(nums[0], 10) : 0;
+      const pd = nums[1] ? parseInt(nums[1], 10) : tot;
+      return JSON.stringify({ patientName: 'مريض عيادة الأسنان', totalAmount: tot, paidAmount: pd, paymentMethod: 'نقد', matchedServices: [] });
+    }
+
+    window.toggleVoiceInput = function(targetId) {
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) { showToast('الإملاء الصوتي غير مدعوم', 'warning'); return; }
+      const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new Rec(); rec.lang = 'ar-YE';
+      showToast('تحدث الآن...', 'info');
+      rec.onresult = e => { document.getElementById(targetId).value = e.results[0][0].transcript; showToast('تم التقاط الصوت', 'success'); };
+      rec.start();
+    };
+
+    window.sendChatMessage = async function() {
+      const inp = document.getElementById('chat-input-text'); const c = document.getElementById('chat-messages-container');
+      const t = inp?.value?.trim(); if (!t) return;
+      appendChatMsg(t, 'user'); inp.value = '';
+      const id = appendChatMsg('جاري دراسة البيانات...', 'ai', true);
+      try {
+        const res = await window.callAI(t, 'أنت المساعد التنفيذي لعيادة د. صلاح الدين السعيدي لطب الأسنان.');
+        document.getElementById(id)?.remove(); appendChatMsg(res.result, 'ai');
+        if (document.getElementById('chat-auto-tts-toggle')?.checked) window.speakText(res.result);
+      } catch(e) { document.getElementById(id)?.remove(); appendChatMsg('عذراً حدث خطأ في الاتصال.', 'ai'); }
+    };
+
+    window.sendQuickChatPrompt = (txt) => { document.getElementById('chat-input-text').value = txt; window.sendChatMessage(); };
+
+    function appendChatMsg(msg, sender, load = false) {
+      const c = document.getElementById('chat-messages-container'); const id = 'm_' + Math.random();
+      const div = document.createElement('div'); div.id = id; div.className = `flex items-start gap-2.5 max-w-[90%] ${sender === 'user' ? 'mr-auto flex-row-reverse' : ''}`;
+      div.innerHTML = `<div class="w-8 h-8 rounded-lg ${sender==='user'?'bg-cyan-600':'bg-cyan-500/20 text-cyan-400'} flex items-center justify-center shrink-0 text-xs"><i class="fa-solid ${sender==='user'?'fa-user':'fa-robot'}"></i></div><div class="${sender==='user'?'bg-cyan-600/30 text-white':'bg-slate-800 text-slate-200'} p-3 text-xs rounded-2xl whitespace-pre-wrap">${load?'<i class="fa-solid fa-spinner fa-spin ml-1"></i>':''}${msg}</div>`;
+      c.appendChild(div); c.scrollTop = c.scrollHeight; return id;
+    }
+    window.clearChatMessages = () => { document.getElementById('chat-messages-container').innerHTML = ''; showToast('تم مسح المحادثة', 'info'); };
+
+    /* ==================== APP UI & RECEIPT ENGINE ==================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      window.loadSettingsToUI();
+      initSigPad();
+      window.initAppUI();
+    });
+
+    window.initAppUI = function() {
+      document.getElementById('receipt-date').value = new Date().toISOString().slice(0, 10);
+      if (!window.AppState.editingReceiptId) document.getElementById('receipt-no').value = window.ClinicDB.getNextReceiptNumber();
+      window.AppState.currentAccountantSig = window.AppState.settings.appearance.permanentAccountantSig || '';
+      renderServices(); renderSigs(); calculateFinancials(); renderRecords(); renderInv(); updateDash();
+    };
+
+    window.switchTab = function(id) {
+      document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+      document.querySelectorAll('nav button').forEach(e => e.classList.remove('active-tab'));
+      document.getElementById(`tab-${id}`)?.classList.remove('hidden');
+      document.getElementById(`tab-btn-${id}`)?.classList.add('active-tab');
+      if (id === 'patients') renderRecords();
+      if (id === 'inventory') renderInv();
+      if (id === 'dashboard') updateDash();
+      if (id === 'settings') renderModelsTable();
+    };
+
+    window.renderServices = function() {
+      const grid = document.getElementById('services-checkbox-grid'); const prev = document.getElementById('preview-services-grid');
+      const srvs = window.AppState.settings.services;
+      grid.innerHTML = srvs.map((s, idx) => {
+        const sel = window.AppState.selectedServices.has(s.name);
+        return `<div onclick="toggleSrv(${idx})" class="service-check-card ${sel?'selected':''}"><div class="flex items-center gap-1.5 truncate"><input type="checkbox" ${sel?'checked':''} class="w-3 h-3 pointer-events-none"/><span class="text-xs text-white truncate">${s.name}</span></div><span class="text-[10px] text-cyan-300 font-bold">${s.price}</span></div>`;
+      }).join('');
+      prev.innerHTML = srvs.map(s => {
+        const sel = window.AppState.selectedServices.has(s.name);
+        return `<div class="flex items-center gap-1 truncate"><i class="fa-${sel?'solid fa-square-check text-[var(--primary-color)]':'regular fa-square text-slate-400'}"></i><span class="truncate ${sel?'font-bold text-[var(--primary-color)]':'text-slate-500'}">${s.name}</span></div>`;
+      }).join('');
+    };
+
+    window.toggleSrv = function(idx) {
+      const name = window.AppState.settings.services[idx].name;
+      if (window.AppState.selectedServices.has(name)) window.AppState.selectedServices.delete(name); else window.AppState.selectedServices.add(name);
+      renderServices(); calculateFinancials();
+    };
+
+    window.calculateFinancials = function() {
+      const tot = parseFloat(document.getElementById('total-amount').value) || 0;
+      const pd = parseFloat(document.getElementById('paid-amount').value) || 0;
+      document.getElementById('remaining-amount').value = Math.max(0, tot - pd);
+      const curr = document.getElementById('currency-select').value === 'أخرى' ? (document.getElementById('custom-currency-input').value || 'ريال') : document.getElementById('currency-select').value;
+      document.getElementById('amount-in-words').value = window.numberToArabicWords(pd, curr);
+      updateLivePreview();
+    };
+
+    window.onPaymentMethodChange = function() {
+      const m = document.querySelector('input[name="payment-method"]:checked').value;
+      document.getElementById('transfer-ref-container').classList.toggle('hidden', m === 'نقد');
+      updateLivePreview();
+    };
+
+    window.onPatientInput = function() {
+      const name = document.getElementById('patient-name').value;
+      const phone = document.getElementById('patient-phone').value;
+      const sum = window.ClinicDB.getPatientDebtSummary(name, phone);
+      window.AppState.currentPreviousDebt = sum.totalDebt;
+      const alert = document.getElementById('patient-debt-alert');
+      alert.classList.toggle('hidden', sum.totalDebt <= 0);
+      document.getElementById('previous-debt-amount').textContent = sum.totalDebt.toLocaleString();
+      updateLivePreview();
+    };
+
+    window.addPreviousDebtToCurrent = function() {
+      const tot = document.getElementById('total-amount');
+      tot.value = (parseFloat(tot.value) || 0) + window.AppState.currentPreviousDebt;
+      window.AppState.currentPreviousDebt = 0;
+      document.getElementById('patient-debt-alert').classList.add('hidden');
+      calculateFinancials();
+    };
+
+    window.updateLivePreview = function() {
+      const get = id => document.getElementById(id)?.value || '';
+      document.getElementById('preview-receipt-no').textContent = get('receipt-no') || '1001';
+      document.getElementById('preview-date').textContent = get('receipt-date');
+      document.getElementById('preview-patient-name').textContent = get('patient-name') || '................';
+      document.getElementById('preview-patient-phone').textContent = get('patient-phone') || '................';
+      document.getElementById('preview-paid-top').textContent = Number(get('paid-amount') || 0).toLocaleString();
+      document.getElementById('preview-total-box').textContent = Number(get('total-amount') || 0).toLocaleString();
+      document.getElementById('preview-paid-box').textContent = Number(get('paid-amount') || 0).toLocaleString();
+      document.getElementById('preview-remaining-box').textContent = Number(get('remaining-amount') || 0).toLocaleString();
+      document.getElementById('preview-amount-words').textContent = get('amount-in-words');
+
+      const meth = document.querySelector('input[name="payment-method"]:checked').value;
+      document.getElementById('preview-transfer-row').classList.toggle('hidden', meth === 'نقد');
+      if (meth !== 'نقد') document.getElementById('preview-transfer-ref').textContent = get('transfer-reference') || '................';
+
+      renderQR({ no: get('receipt-no'), date: get('receipt-date'), total: get('total-amount'), paid: get('paid-amount'), rem: get('remaining-amount') });
+    };
+
+    function renderQR(data) {
+      const c = document.getElementById('receipt-qrcode-container'); c.innerHTML = '';
+      try {
+        const qr = qrcode(0, 'M'); qr.addData(JSON.stringify(data), 'Byte'); qr.make();
+        c.innerHTML = qr.createSvgTag({ cellSize: 2, margin: 1 });
+      } catch(e) { c.textContent = 'QR'; }
+    }
+
+    /* ==================== SIGNATURE PAD ==================== */
+    let sigCanvas, sigCtx, isDrawing = false, activeRole = 'accountant';
+    function initSigPad() {
+      sigCanvas = document.getElementById('signature-pad-canvas'); if (!sigCanvas) return;
+      sigCtx = sigCanvas.getContext('2d'); sigCtx.strokeStyle = '#0B2545'; sigCtx.lineWidth = 2.5; sigCtx.lineCap = 'round';
+      const pos = e => { const r = sigCanvas.getBoundingClientRect(); const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY; return { x: (cx - r.left) * (sigCanvas.width / r.width), y: (cy - r.top) * (sigCanvas.height / r.height) }; };
+      const start = e => { e.preventDefault(); isDrawing = true; const p = pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+      const move = e => { if (!isDrawing) return; e.preventDefault(); const p = pos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
+      const end = () => isDrawing = false;
+      sigCanvas.addEventListener('mousedown', start); sigCanvas.addEventListener('mousemove', move); sigCanvas.addEventListener('mouseup', end);
+      sigCanvas.addEventListener('touchstart', start, {passive:false}); sigCanvas.addEventListener('touchmove', move, {passive:false}); sigCanvas.addEventListener('touchend', end);
+    }
+    window.openSignatureModal = role => { activeRole = role; document.getElementById('signature-modal').classList.remove('hidden'); sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); };
+    window.closeSignatureModal = () => document.getElementById('signature-modal').classList.add('hidden');
+    window.clearSignatureCanvas = () => sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    window.applySignatureToReceipt = () => {
+      const url = sigCanvas.toDataURL();
+      if (activeRole === 'receiver') window.AppState.currentReceiverSig = url; else window.AppState.currentAccountantSig = url;
+      renderSigs(); closeSignatureModal(); showToast('تم الاعتماد', 'success');
+    };
+    window.saveAsPermanentSignature = () => {
+      const url = sigCanvas.toDataURL(); window.AppState.settings.appearance.permanentAccountantSig = url; window.AppState.currentAccountantSig = url;
+      window.saveSettingsState(); renderSigs(); closeSignatureModal(); showToast('تم الحفظ كتوقيع دائم', 'success');
+    };
+    function renderSigs() {
+      document.getElementById('preview-signature-receiver').innerHTML = window.AppState.currentReceiverSig ? `<img src="${window.AppState.currentReceiverSig}" class="signature-img-rendered"/>` : '<span class="text-slate-400">إضغط للتوقيع</span>';
+      document.getElementById('preview-signature-accountant').innerHTML = window.AppState.currentAccountantSig ? `<img src="${window.AppState.currentAccountantSig}" class="signature-img-rendered"/>` : '<span class="text-slate-400">إضغط للتوقيع</span>';
+    }
+
+    /* ==================== SAVE, PRINT & EXPORT ==================== */
+    window.gatherData = () => ({
+      id: window.AppState.editingReceiptId || ('REC_' + Date.now()),
+      receiptNo: document.getElementById('receipt-no').value || '1001',
+      date: document.getElementById('receipt-date').value,
+      patientName: document.getElementById('patient-name').value || 'مريض',
+      patientPhone: document.getElementById('patient-phone').value,
+      services: Array.from(window.AppState.selectedServices),
+      totalAmount: parseFloat(document.getElementById('total-amount').value) || 0,
+      paidAmount: parseFloat(document.getElementById('paid-amount').value) || 0,
+      remainingAmount: parseFloat(document.getElementById('remaining-amount').value) || 0,
+      currency: document.getElementById('currency-select').value,
+      paymentMethod: document.querySelector('input[name="payment-method"]:checked').value,
+      receiverSig: window.AppState.currentReceiverSig, accountantSig: window.AppState.currentAccountantSig
+    });
+
+    window.saveReceiptOnly = () => { const d = window.gatherData(); window.ClinicDB.saveReceipt(d); renderRecords(); updateDash(); showToast(`تم حفظ السند #${d.receiptNo}`, 'success'); return d; };
+    window.saveAndPrintReceipt = mode => { window.saveReceiptOnly(); document.body.classList.toggle('print-mode-thermal', mode === 'thermal'); setTimeout(() => window.print(), 100); };
+
+    let lastBlob = null, lastUrl = null;
+    window.exportReceiptAsImageMobile = async () => {
+      const card = document.getElementById('printable-receipt-card'); window.saveReceiptOnly();
+      const canvas = await html2canvas(card, { scale: 2, backgroundColor: '#ffffff' });
+      lastUrl = canvas.toDataURL('image/png');
+      canvas.toBlob(b => {
+        lastBlob = b; document.getElementById('generated-receipt-img').src = lastUrl;
+        document.getElementById('image-preview-modal').classList.remove('hidden');
+      });
+    };
+    window.triggerBlobDownload = () => {
+      const a = document.createElement('a'); a.href = lastUrl; a.download = 'Receipt.png'; a.click(); showToast('تم التنزيل', 'success');
+    };
+    window.shareGeneratedReceiptImage = async () => {
+      if (navigator.canShare && lastBlob) { await navigator.share({ files: [new File([lastBlob], 'Receipt.png', {type:'image/png'})] }); } else { window.triggerBlobDownload(); }
+    };
+    window.closeImagePreviewModal = () => document.getElementById('image-preview-modal').classList.add('hidden');
+
+    window.sendReceiptViaWhatsApp = () => {
+      const d = window.saveReceiptOnly();
+      const msg = `سند قبض رقم: ${d.receiptNo}\nالمريض: ${d.patientName}\nالمدفوع: ${d.paidAmount} ${d.currency}\nالمتبقي: ${d.remainingAmount} ${d.currency}\nعيادة د. صلاح الدين السعيدي`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    /* ==================== RECORDS & INVENTORY ==================== */
+    window.renderRecords = function() {
+      const tb = document.getElementById('records-table-body'); const list = window.AppState.receipts || [];
+      document.getElementById('nav-debts-count').textContent = list.filter(r => (r.remainingAmount||0) > 0).length;
+      if (!list.length) { tb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-slate-500">لا توجد سندات</td></tr>`; return; }
+      tb.innerHTML = list.map(r => `<tr class="hover:bg-slate-900"><td class="p-2 text-cyan-300 font-bold">#${r.receiptNo}</td><td class="p-2">${r.date}</td><td class="p-2 font-bold">${r.patientName}</td><td class="p-2">${r.patientPhone||'-'}</td><td class="p-2">${(r.services||[]).join(', ')||'-'}</td><td class="p-2">${r.totalAmount}</td><td class="p-2 text-emerald-400">${r.paidAmount}</td><td class="p-2 text-rose-400">${r.remainingAmount}</td><td class="p-2 text-center"><button onclick="window.ClinicDB.deleteReceipt('${r.id}');renderRecords();" class="text-rose-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+    };
+
+    window.renderInv = function() {
+      const ib = document.getElementById('inventory-table-body'); const eb = document.getElementById('expenses-table-body');
+      const inv = window.AppState.inventory; const exp = window.AppState.expenses;
+      document.getElementById('inv-stat-total-items').textContent = inv.length;
+      document.getElementById('inv-stat-low-stock').textContent = inv.filter(i => i.qty <= i.minQty).length;
+      document.getElementById('inv-stat-total-expenses').textContent = exp.reduce((s, e) => s + e.amount, 0).toLocaleString() + ' ر.ي';
+
+      ib.innerHTML = inv.map(i => `<tr class="hover:bg-slate-900"><td class="p-2 font-bold">${i.name}</td><td class="p-2 font-black ${i.qty<=i.minQty?'text-amber-400':'text-emerald-400'}">${i.qty}</td><td class="p-2">${i.minQty}</td><td class="p-2">${i.qty<=i.minQty?'⚠️ نقص':'متوفر'}</td><td class="p-2 text-center"><button onclick="window.ClinicDB.updateInventoryQty('${i.id}',1);renderInv();" class="bg-slate-800 px-2 rounded">+</button> <button onclick="window.ClinicDB.updateInventoryQty('${i.id}',-1);renderInv();" class="bg-slate-800 px-2 rounded">-</button></td></tr>`).join('');
+      eb.innerHTML = exp.length ? exp.map(e => `<tr class="hover:bg-slate-900"><td class="p-2">${e.title}</td><td class="p-2 text-rose-400">${e.amount}</td><td class="p-2">${e.date}</td><td class="p-2 text-center"><button onclick="window.ClinicDB.deleteExpense('${e.id}');renderInv();" class="text-rose-400"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : `<tr><td colspan="4" class="text-center py-3 text-slate-500">لا توجد مصروفات</td></tr>`;
+    };
+
+    window.openInventoryModal = () => document.getElementById('inventory-modal').classList.remove('hidden');
+    window.closeInventoryModal = () => document.getElementById('inventory-modal').classList.add('hidden');
+    window.saveInventoryItemFromModal = () => { window.ClinicDB.addInventoryItem(document.getElementById('inv-item-name').value, document.getElementById('inv-item-qty').value, document.getElementById('inv-item-min').value); closeInventoryModal(); renderInv(); showToast('تمت إضافة المادة', 'success'); };
+
+    window.openExpenseModal = () => document.getElementById('expense-modal').classList.remove('hidden');
+    window.closeExpenseModal = () => document.getElementById('expense-modal').classList.add('hidden');
+    window.saveExpenseFromModal = () => { window.ClinicDB.addExpense(document.getElementById('exp-item-title').value, document.getElementById('exp-item-amount').value); closeExpenseModal(); renderInv(); updateDash(); showToast('تم تسجيل المصروف', 'success'); };
+
+    window.updateDash = function() {
+      const c = window.ClinicDB.buildClinicFullContext().stats;
+      document.getElementById('stat-total-receipts').textContent = c.totalReceiptsCount;
+      document.getElementById('stat-total-paid').textContent = c.totalCollectedRevenue.toLocaleString() + ' ر.ي';
+      document.getElementById('stat-total-debt').textContent = c.totalPendingDebts.toLocaleString() + ' ر.ي';
+      document.getElementById('stat-total-expenses').textContent = c.totalExpenses.toLocaleString() + ' ر.ي';
+      document.getElementById('stat-net-profit').textContent = c.netProfit.toLocaleString() + ' ر.ي';
+    };
+
+    window.generateComprehensiveFinancialReport = async function() {
+      const rep = document.getElementById('ai-financial-report'); rep.textContent = 'جاري إعداد التقرير...';
+      const c = window.ClinicDB.buildClinicFullContext();
+      try {
+        const res = await window.callAI(JSON.stringify(c), 'أنت مستشار مالي لعيادة أسنان. أعطني تقريراً تشغيلياً ومالياً مختصراً.');
+        rep.textContent = res.result; showToast('تم التقرير', 'success');
+      } catch(e) { rep.textContent = `المقبوضات: ${c.stats.totalCollectedRevenue}\nالمصروفات: ${c.stats.totalExpenses}\nصافي الربح: ${c.stats.netProfit}`; }
+    };
+
+    /* ==================== SETTINGS & THEMES ==================== */
+    window.applySelectedTheme = function(th) {
+      document.body.className = `theme-${th} bg-slate-950 text-slate-100 font-cairo min-h-screen flex flex-col`;
+      window.AppState.settings.appearance.theme = th; window.saveSettingsState();
+    };
+    window.changeWatermarkOpacity = v => { document.getElementById('watermark-opacity-val').textContent = v + '%'; document.getElementById('receipt-watermark-overlay').style.opacity = v / 100; };
+    window.uploadCustomLogo = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const reader = new FileReader(); reader.onload = ev => {
+        window.AppState.settings.appearance.customLogoDataUrl = ev.target.result; window.saveSettingsState();
+        ['main-clinic-logo', 'preview-card-logo', 'preview-watermark-img'].forEach(id => document.getElementById(id).src = ev.target.result);
+        showToast('تم تحديث الشعار', 'success');
+      }; reader.readAsDataURL(f);
+    };
+
+    window.renderModelsTable = function() {
+      const tb = document.getElementById('models-matrix-table-body');
+      tb.innerHTML = window.AI_MODELS_CATALOG.map((m, i) => `<tr class="hover:bg-slate-900"><td class="p-2">${i+1}</td><td class="p-2 uppercase font-bold text-cyan-300">${m.provider}</td><td class="p-2 text-white">${m.name}</td><td class="p-2 text-slate-400">${m.specialty}</td><td class="p-2"><span class="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px]">${m.status}</span></td><td class="p-2 text-center"><button onclick="window.AppState.settings.ai.selectedMode='${m.id}';window.saveSettingsState();showToast('تم التفعيل','success')" class="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-[10px]">تفعيل</button></td></tr>`).join('');
+    };
+
+    window.testAndDiscoverAllModels = async function() {
+      window.saveAllSettings(); showToast('تم حفظ المفاتيح بنجاح', 'success');
+    };
+
+    window.saveAllSettings = function() {
+      const s = window.AppState.settings;
+      s.clinic.doctorAr = document.getElementById('cfg-doctor-ar').value;
+      s.ai.geminiKey = document.getElementById('cfg-gemini-key').value;
+      s.ai.groqKey = document.getElementById('cfg-groq-key').value;
+      s.ai.openrouterKey = document.getElementById('cfg-openrouter-key').value;
+      window.saveSettingsState(); window.loadSettingsToUI(); showToast('تم حفظ الإعدادات', 'success');
+    };
+
+    window.loadSettingsToUI = function() {
+      const s = window.AppState.settings;
+      document.getElementById('cfg-doctor-ar').value = s.clinic.doctorAr;
+      document.getElementById('cfg-gemini-key').value = s.ai.geminiKey || '';
+      document.getElementById('cfg-groq-key').value = s.ai.groqKey || '';
+      document.getElementById('cfg-openrouter-key').value = s.ai.openrouterKey || '';
+      document.getElementById('cfg-theme-select').value = s.appearance.theme;
+      window.applySelectedTheme(s.appearance.theme);
+      renderModelsTable();
+    };
+
+    window.speakText = t => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance((t||'').replace(/[*#_`]/g,'')); u.lang = 'ar-SA'; window.speechSynthesis.speak(u);
+    };
+
+    window.showToast = function(msg, type = 'info') {
+      const c = document.getElementById('toast-container'); const t = document.createElement('div');
+      t.className = `toast-item px-4 py-3 rounded-xl border text-xs font-bold ${type==='success'?'bg-emerald-950 border-emerald-500 text-emerald-200':'bg-[#0B2545] border-cyan-400 text-cyan-100'}`;
+      t.innerHTML = `<i class="fa-solid fa-circle-info ml-1.5"></i>${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3500);
+    };
+  </script>
+</body>
+</html>
