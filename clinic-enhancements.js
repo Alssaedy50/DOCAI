@@ -119,3 +119,28 @@ document.addEventListener('DOMContentLoaded',function(){
  if(chatInput&&!fileInput){const wrap=document.createElement('div');wrap.className='flex flex-wrap gap-2 items-center mt-2';wrap.innerHTML='<label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-cyan-200 rounded-lg px-3 py-2 text-xs">📎 إرفاق ملفات وصور<input id="chat-file-input" type="file" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.docx,.xlsx,.xls" class="hidden"></label><span id="chat-attachment-preview" class="text-xs text-slate-400"></span>';chatInput.parentElement.insertAdjacentElement('afterend',wrap);document.getElementById('chat-file-input').addEventListener('change',e=>window.prepareClinicChatFiles(e.target.files));}
  const oldButton=document.querySelector('#tab-settings button[onclick="testAndDiscoverAllModels()"]');if(oldButton){oldButton.onclick=window.refreshVerifiedModels;oldButton.textContent='فحص النماذج باستجابة فعلية';}
 });
+
+
+/* Enforce that provider keys are never written to localStorage, even via legacy settings buttons. */
+(function(){
+ const originalLoad=window.loadSettingsToUI;
+ window.saveSettingsState=function(){
+  try{window.AppState.settings.ai.geminiKey='';window.AppState.settings.ai.groqKey='';window.AppState.settings.ai.openrouterKey='';}catch(e){}
+  const copy=JSON.parse(JSON.stringify(window.AppState.settings||{}));
+  if(copy.ai){copy.ai.geminiKey='';copy.ai.groqKey='';copy.ai.openrouterKey='';}
+  if(copy.cloud){copy.cloud.apiKey='';}
+  localStorage.setItem('alssaedy_erp_settings_v1',JSON.stringify(copy));
+ };
+ if(typeof originalLoad==='function')window.loadSettingsToUI=function(){
+  const keys=window.getClinicProviderKeys();originalLoad();
+  ['gemini','groq','openrouter'].forEach(k=>{const el=document.getElementById('cfg-'+k+'-key');if(el&&keys[k])el.value=keys[k];});
+ };
+ const originalSaveAll=window.saveAllSettings;
+ window.saveAllSettings=function(){
+  const keys=window.getClinicProviderKeys();
+  if(typeof originalSaveAll==='function')originalSaveAll();
+  ['gemini','groq','openrouter'].forEach(k=>{const el=document.getElementById('cfg-'+k+'-key');if(el)el.value=keys[k];});
+  ['gemini','groq','openrouter'].forEach(k=>{const el=document.getElementById('cfg-'+k+'-key');if(el)el.value=keys[k];});
+  showToast('حُفظت إعدادات العيادة دون حفظ مفاتيح API؛ المفاتيح تبقى في الذاكرة لهذه الجلسة فقط.','success');
+ };
+})();
