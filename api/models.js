@@ -9,7 +9,7 @@ module.exports=async function(req,res){
 res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
 if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'استخدم POST لإرسال مفاتيح الجلسة للاختبار.'});}
 const b=typeof req.body==='string'?(()=>{try{return JSON.parse(req.body)}catch{return {}}})():(req.body||{}),keys=b.keys||{};
-const available=C.filter(m=>String(keys[m.provider]||'').trim());if(!available.length)return res.status(400).json({error:'أدخل مفتاحاً واحداً على الأقل من إعدادات الموقع.'});
+const available=C.filter(m=>String(keys[m.provider]||'').trim());if(!available.length)return res.status(400).json({error:'اضبط GEMINI_API_KEY أو GROQ_API_KEY أو OPENROUTER_API_KEY في Vercel، أو أدخل مفتاحاً في إعدادات الموقع.'});
 const results=await Promise.all(available.map(async m=>{try{
 let url,headers={'Content-Type':'application/json'},body,key=String(keys[m.provider]).trim();
 if(m.provider==='gemini'){url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m.model)+':generateContent?key='+encodeURIComponent(key);body={contents:[{parts:[{text:'Reply with exactly: OK'}]}],generationConfig:{temperature:0,maxOutputTokens:8}};}
