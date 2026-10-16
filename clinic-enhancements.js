@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const copy=JSON.parse(JSON.stringify(window.AppState.settings||{}));
   if(copy.ai){copy.ai.geminiKey='';copy.ai.groqKey='';copy.ai.openrouterKey='';}
   if(copy.cloud){copy.cloud.apiKey='';}
-  localStorage.setItem('alssaedy_erp_settings_v1',JSON.stringify(copy));
+  localStorage.setItem('alssaedy_erp_s_v2',JSON.stringify(copy));
  };
  if(typeof originalLoad==='function')window.loadSettingsToUI=function(){
   const keys=window.getClinicProviderKeys();originalLoad();
