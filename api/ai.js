@@ -13,7 +13,7 @@ async function invoke(provider,model,prompt,system,keys,attachments=[]){
  if(provider==='gemini'){
   url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key);
   const parts=[{text:String(system||'مساعد عيادة')+'\n\n'+prompt}];
-  for(const a of attachments){if(a&&a.type==='image'&&typeof a.dataUrl==='string'){const m=a.dataUrl.match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/);if(m)parts.push({inlineData:{mimeType:m[1],data:m[2]}});}}
+  for(const a of attachments){if(a&&a.type==='image'){const mime=String(a.mime||'image/jpeg'),data=String(a.data||'');if(/^image\/(png|jpeg|webp|gif)$/.test(mime)&&/^[A-Za-z0-9+/=]+$/.test(data)&&data.length<3500000)parts.push({inlineData:{mimeType:mime,data}});}}
   body={contents:[{parts}],generationConfig:{temperature:.2,maxOutputTokens:4096}};
  }else{
   url=provider==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://openrouter.ai/api/v1/chat/completions';
