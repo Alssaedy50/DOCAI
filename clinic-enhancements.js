@@ -146,3 +146,33 @@ document.addEventListener('DOMContentLoaded',function(){
   showToast('حُفظت إعدادات العيادة دون حفظ مفاتيح API؛ المفاتيح تبقى في الذاكرة لهذه الجلسة فقط.','success');
  };
 })();
+
+
+/* Settings-entered keys: live model test without saving secrets to local storage. */
+window.testAndDiscoverAllModels=async function(){
+ const keys=window.getClinicProviderKeys(),btn=document.querySelector('#tab-settings button[onclick="testAndDiscoverAllModels()"]')||document.querySelector('#tab-settings button[onclick="window.refreshVerifiedModels"]');
+ const status=document.getElementById('models-health-status');
+ if(!Object.values(keys).some(Boolean)){showToast('أدخل مفتاحاً واحداً على الأقل في الإعدادات أولاً.','error');return;}
+ if(btn){btn.disabled=true;btn.textContent='جارٍ اختبار الاستجابات…';}
+ if(status)status.textContent='يتم اختبار المفاتيح والنماذج الآن…';
+ try{
+  const r=await fetch('/api/models',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({keys})}),d=await r.json();
+  if(!r.ok)throw Error(d.error||'فشل الاختبار');
+  window.AI_MODELS_CATALOG=Array.isArray(d.models)?d.models:[];
+  const sel=document.getElementById('quick-model-select');
+  if(sel){sel.replaceChildren();const auto=document.createElement('option');auto.value='auto';auto.textContent='🤖 اختيار تلقائي من النماذج المجربة';sel.appendChild(auto);
+   window.AI_MODELS_CATALOG.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name+' — '+m.costClass;sel.appendChild(o);});
+   const local=document.createElement('option');local.value='local';local.textContent='محلي دون اتصال (قدرات محدودة)';sel.appendChild(local);sel.value='auto';window.AppState.settings.ai.selectedMode='auto';
+  }
+  const table=document.querySelector('#tab-settings table');
+  if(table){let body=table.querySelector('tbody');if(!body){body=document.createElement('tbody');table.appendChild(body);}body.replaceChildren();
+   if(!window.AI_MODELS_CATALOG.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.className='p-3 text-amber-300';td.textContent='لم يجتز أي نموذج الاختبار. تحقق من المفاتيح والحصة ثم أعد الفحص.';tr.appendChild(td);body.appendChild(tr);}
+   window.AI_MODELS_CATALOG.forEach(m=>{const tr=document.createElement('tr');[m.name,m.specialty,'نجح الاختبار',m.costClass,m.limits?.requestsRemaining??'غير متاح'].forEach(v=>{const td=document.createElement('td');td.className='p-2 border-b border-slate-800';td.textContent=String(v);tr.appendChild(td);});body.appendChild(tr);});
+  }
+  if(status)status.textContent='اكتمل الفحص: '+window.AI_MODELS_CATALOG.length+' نموذج ناجح. '+(d.notice||'');
+  showToast('تم اختبار النماذج: '+window.AI_MODELS_CATALOG.length+' ناجح','success');
+ }catch(e){if(status)status.textContent='تعذر الفحص: '+e.message;showToast('فشل اختبار النماذج: '+e.message,'error');}
+ finally{if(btn){btn.disabled=false;btn.textContent='فحص النماذج باستجابة فعلية';}}
+};
+window.refreshVerifiedModels=window.testAndDiscoverAllModels;
+document.addEventListener('DOMContentLoaded',()=>{const b=document.querySelector('#tab-settings button[onclick="testAndDiscoverAllModels()"]');if(b){b.onclick=window.testAndDiscoverAllModels;b.removeAttribute('onclick');}const aiBtn=document.querySelector('#tab-settings button[onclick="window.refreshVerifiedModels"]');if(aiBtn)aiBtn.onclick=window.testAndDiscoverAllModels;});
