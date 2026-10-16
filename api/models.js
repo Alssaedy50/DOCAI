@@ -19,7 +19,7 @@ async function test(m){
  const free=m.provider==='openrouter'&&m.model.endsWith(':free');
  const limits={};
  for(const [h,k] of [['x-ratelimit-limit-requests','requestsLimit'],['x-ratelimit-remaining-requests','requestsRemaining'],['x-ratelimit-reset-requests','requestsReset'],['x-ratelimit-limit-tokens','tokensLimit'],['x-ratelimit-remaining-tokens','tokensRemaining']]){const v=r.headers.get(h);if(v!==null)limits[k]=v;}
- return {...m,status:'tested-ok',testedAt:new Date().toISOString(),testResponse:String(answer).trim().slice(0,80),costClass:free?'مجاني حسب مسار OpenRouter':(m.provider==='groq'?'حصة/حدود حساب Groq':m.provider==='gemini'?'حصة/حدود حساب Gemini':'تحقق من التسعير'),limits};
+ return {...m,status:'tested-ok',testedAt:new Date().toISOString(),testResponse:String(answer).trim().slice(0,80),costClass:free?'مجاني حسب مسار OpenRouter؛ حدود يومية تتغير حسب حسابك':(m.provider==='groq'?'حصة/حدود حساب Groq':m.provider==='gemini'?'حصة/حدود حساب Gemini':'تحقق من التسعير'),limits};
 }
 module.exports=async function(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
