@@ -78,6 +78,75 @@
       body.print-mode-thermal #printable-receipt-card { max-width: 78mm !important; margin: 0 auto !important; padding: 6px !important; font-size: 10px !important; }
     }
   </style>
+
+  <style id="docai-sidebar-chat-ui">
+    :root{--docai-sidebar-width:268px}
+    body{background:#07111f}
+    #clinic-sidebar{position:fixed;z-index:70;right:0;top:0;bottom:0;width:var(--docai-sidebar-width);display:flex;flex-direction:column;background:linear-gradient(180deg,#081827,#07111f 72%);border-left:1px solid #1e3a50;box-shadow:-12px 0 35px #0002;padding:18px 12px;transition:transform .25s ease}
+    #clinic-sidebar .sidebar-brand{display:flex;align-items:center;gap:11px;padding:4px 8px 18px;border-bottom:1px solid #1e3346;margin-bottom:14px}
+    #clinic-sidebar .sidebar-brand img{width:44px;height:44px;object-fit:contain;background:#0b2545;border:1px solid #38bdf8;border-radius:14px;padding:4px}
+    #clinic-sidebar .sidebar-brand strong{display:block;font-size:13px;color:#f8fafc}
+    #clinic-sidebar .sidebar-brand small{display:block;color:#7dd3fc;font-size:9px;letter-spacing:.08em;margin-top:3px}
+    #clinic-sidebar nav{display:block!important;background:transparent!important;border:0!important;overflow:visible!important}
+    #clinic-sidebar nav>div{display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:0!important;overflow:visible!important}
+    #clinic-sidebar .nav-tab{width:100%;display:flex;align-items:center;justify-content:flex-start;text-align:right;border:1px solid transparent;border-radius:12px;padding:13px 14px!important;color:#a8bdcf;white-space:normal}
+    #clinic-sidebar .nav-tab i{width:22px;text-align:center;font-size:15px}
+    #clinic-sidebar .nav-tab:hover{background:#11273a;color:#fff}
+    #clinic-sidebar .nav-tab.active-tab{background:linear-gradient(110deg,#0c3852,#10304a);border:1px solid #155e75;color:#67e8f9;box-shadow:inset -3px 0 #22d3ee}
+    #clinic-sidebar #tab-btn-settings{margin:10px 0 0!important;border-top:1px solid #1e3346;border-radius:0;padding-top:18px!important}
+    #clinic-sidebar .sidebar-ai{margin-top:auto;padding:12px;background:#0b1d2c;border:1px solid #1e3a50;border-radius:14px}
+    #clinic-sidebar .sidebar-ai label{display:block;color:#94a3b8;font-size:10px;margin-bottom:7px}
+    #clinic-sidebar #quick-model-select{width:100%;max-width:100%;border-radius:9px;padding:9px;font-size:11px}
+    #clinic-sidebar .sidebar-status{display:flex;align-items:center;gap:7px;color:#94a3b8;font-size:10px;margin-top:12px}
+    #clinic-sidebar .sidebar-status:before{content:'';width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 12px #34d399}
+    #clinic-sidebar-toggle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;border:1px solid #24506a;background:#0b2234;color:#7dd3fc}
+    #clinic-sidebar-overlay{display:none;position:fixed;inset:0;background:#020617aa;z-index:65}
+    body:not(.chat-page) header{margin-right:var(--docai-sidebar-width);width:calc(100% - var(--docai-sidebar-width))}
+    body:not(.chat-page) main{margin-right:var(--docai-sidebar-width);width:calc(100% - var(--docai-sidebar-width));max-width:none}
+    body:not(.chat-page) header nav{display:none!important}
+    #tab-chat-agent{min-width:0}
+    #tab-chat-agent .chat-shell{height:calc(100dvh - 36px);min-height:540px;display:flex;flex-direction:column;overflow:hidden;border:1px solid #1e4057;border-radius:0;background:#081827;box-shadow:none;padding:0}
+    #tab-chat-agent .chat-topbar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#0b2030;border-bottom:1px solid #1e4057}
+    #chat-back-button{width:38px;height:38px;border-radius:12px;border:1px solid #24465c;background:#102b40;color:#bae6fd;flex-shrink:0}
+    #tab-chat-agent .chat-heading{min-width:0;flex:1}
+    #tab-chat-agent .chat-heading h2{font-size:14px}
+    #tab-chat-agent .chat-heading p{font-size:10px}
+    #tab-chat-agent #chat-messages-container{flex:1;min-height:0;max-height:none;padding:22px clamp(12px,4vw,48px);gap:16px;background-color:#071521;background-image:radial-gradient(#1e3a4d 0.7px,transparent 0.7px);background-size:19px 19px;overscroll-behavior:contain}
+    #tab-chat-agent .chat-quick-actions{padding:9px 14px;border-bottom:1px solid #183247;background:#0a1c2a}
+    #tab-chat-agent .chat-composer-wrap{padding:12px clamp(10px,3vw,28px) 14px;background:#0b2030;border-top:1px solid #1e4057}
+    #tab-chat-agent .chat-composer{display:flex;align-items:flex-end;gap:8px;max-width:1000px;margin:auto;padding:8px;background:#071521;border:1px solid #27475b;border-radius:18px}
+    #tab-chat-agent #chat-input-text{flex:1;min-height:44px;max-height:130px;resize:vertical;background:transparent;border:0;padding:11px 9px;font-size:13px}
+    #tab-chat-agent .chat-icon-btn{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:13px;background:#122b3d;border:1px solid #24465c;color:#c5e9fa}
+    #tab-chat-agent #chat-send-button{height:42px;width:46px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;background:linear-gradient(135deg,#0891b2,#2563eb);color:white}
+    #chat-attachment-preview{max-width:1000px;margin:0 auto 8px;color:#7dd3fc;font-size:11px;overflow-wrap:anywhere}
+    #chat-voice-toolbar{max-width:1000px;margin:8px auto 0!important;padding:8px 0 0!important;border-top:1px solid #1e4057!important}
+    #chat-voice-toolbar label,#chat-voice-toolbar button{font-size:10px}
+    #chat-voice-toolbar p{line-height:1.6}
+    .clinic-chat-row{animation:docai-message-in .18s ease-out}
+    @keyframes docai-message-in{from{opacity:.25;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:900px){
+      #clinic-sidebar{transform:translateX(105%);width:min(300px,86vw)}
+      body.sidebar-open #clinic-sidebar{transform:translateX(0)}
+      body.sidebar-open #clinic-sidebar-overlay{display:block}
+      body:not(.chat-page) header,body:not(.chat-page) main{margin-right:0;width:100%}
+      body:not(.chat-page) header .max-w-7xl{padding-right:12px}
+      #tab-chat-agent .chat-shell{height:calc(100dvh - 8px);min-height:0}
+      #tab-chat-agent .chat-topbar{padding:10px}
+      #tab-chat-agent #chat-messages-container{padding:14px 10px}
+      #tab-chat-agent .chat-composer-wrap{padding:8px}
+      #chat-voice-toolbar{gap:6px}
+    }
+    @media(min-width:901px){#clinic-sidebar-toggle{display:none!important}#clinic-sidebar-overlay{display:none!important}}
+    body.chat-page{overflow:hidden}
+    body.chat-page header,body.chat-page #clinic-sidebar,body.chat-page #clinic-sidebar-overlay,body.chat-page #clinic-sidebar-toggle{display:none!important}
+    body.chat-page main{margin:0!important;padding:0!important;width:100%!important;max-width:none!important;flex:1;overflow:hidden}
+    body.chat-page main>section:not(#tab-chat-agent){display:none!important}
+    body.chat-page #tab-chat-agent{display:block!important;margin:0!important;padding:0!important;height:100dvh}
+    body.chat-page #tab-chat-agent .chat-shell{height:100dvh;min-height:0;border:0}
+    body.chat-page #tab-chat-agent .chat-topbar{padding-top:max(12px,env(safe-area-inset-top))}
+    body.chat-page #tab-chat-agent .chat-composer-wrap{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+    body.chat-page #chat-voice-toolbar p{display:none}
+  </style>
 </head>
 <body class="theme-navy bg-slate-950 text-slate-100 font-cairo min-h-screen flex flex-col selection:bg-cyan-500 selection:text-white pb-16 md:pb-0">
 
@@ -1311,5 +1380,67 @@ document.addEventListener('DOMContentLoaded',function(){var main=document.queryS
 
 </script>
 <script src="/clinic-enhancements.js" defer></script>
+
+<script id="docai-sidebar-chat-behavior">
+(function(){
+  function setupDocaiShell(){
+    if(document.getElementById('clinic-sidebar')) return;
+    const body=document.body,header=document.querySelector('body>header'),main=document.querySelector('body>main');
+    const nav=header&&header.querySelector('nav');
+    const sidebar=document.createElement('aside');sidebar.id='clinic-sidebar';sidebar.setAttribute('aria-label','القائمة الرئيسية');
+    sidebar.innerHTML='<div class="sidebar-brand"><img id="sidebar-clinic-logo" alt="شعار العيادة"><div><strong>ALSSAEDY CLINIC</strong><small>نظام إدارة العيادة</small></div></div><div id="sidebar-nav-slot"></div><div class="sidebar-ai"><label for="quick-model-select"><i class="fa-solid fa-microchip ml-1"></i> نموذج الذكاء الاصطناعي</label><div id="sidebar-model-slot"></div><div class="sidebar-status">واجهة إدارة العيادة جاهزة</div></div>';
+    if(nav)sidebar.querySelector('#sidebar-nav-slot').appendChild(nav);
+    const model=document.getElementById('quick-model-select');if(model)sidebar.querySelector('#sidebar-model-slot').appendChild(model);
+    body.appendChild(sidebar);
+    const overlay=document.createElement('div');overlay.id='clinic-sidebar-overlay';overlay.onclick=()=>body.classList.remove('sidebar-open');body.appendChild(overlay);
+    const toggle=document.createElement('button');toggle.id='clinic-sidebar-toggle';toggle.type='button';toggle.setAttribute('aria-label','فتح القائمة الجانبية');toggle.innerHTML='<i class="fa-solid fa-bars"></i>';toggle.onclick=()=>body.classList.toggle('sidebar-open');
+    const headerActions=header&&header.querySelector('.max-w-7xl>div:last-child');if(headerActions)headerActions.prepend(toggle);
+    const logo=document.getElementById('main-clinic-logo'),sideLogo=document.getElementById('sidebar-clinic-logo');if(logo&&sideLogo)sideLogo.src=logo.src;
+    if(logo){const obs=new MutationObserver(()=>{sideLogo.src=logo.src;});obs.observe(logo,{attributes:true,attributeFilter:['src']});}
+    const chat=document.getElementById('tab-chat-agent');
+    if(chat){
+      const shell=chat.firstElementChild;if(shell){shell.classList.add('chat-shell');}
+      const top=shell&&shell.firstElementChild;
+      if(top){top.classList.add('chat-topbar');const left=top.firstElementChild;if(left){left.classList.add('chat-heading');const back=document.createElement('button');back.id='chat-back-button';back.type='button';back.title='العودة إلى لوحة العيادة';back.setAttribute('aria-label','العودة');back.innerHTML='<i class="fa-solid fa-arrow-right"></i>';back.onclick=()=>window.switchTab('receipt');top.prepend(back);}}
+      const quick=chat.querySelector('.chat-topbar')?.nextElementSibling;if(quick)quick.classList.add('chat-quick-actions');
+      const input=document.getElementById('chat-input-text'),footer=input&&input.parentElement;
+      if(footer&&!document.getElementById('chat-file-input')){
+        footer.classList.add('chat-composer');
+        const file=document.createElement('input');file.type='file';file.id='chat-file-input';file.multiple=true;file.accept='.pdf,.docx,.xlsx,.xls,.txt,.md,.csv,.json,.log,image/png,image/jpeg,image/webp';file.hidden=true;file.onchange=async()=>{await window.prepareClinicChatFiles(file.files);file.value='';};footer.prepend(file);
+        const attach=document.createElement('button');attach.type='button';attach.className='chat-icon-btn';attach.title='إرفاق ملفات أو صور';attach.setAttribute('aria-label','إرفاق ملفات');attach.innerHTML='<i class="fa-solid fa-paperclip"></i>';attach.onclick=()=>file.click();footer.prepend(attach);
+        const mic=footer.querySelector('button[onclick*="toggleVoiceInput"]');if(mic){mic.classList.add('chat-icon-btn');mic.title='إملاء صوتي';mic.setAttribute('aria-label','إملاء صوتي');mic.innerHTML='<i class="fa-solid fa-microphone"></i>';}
+        const send=footer.querySelector('button[onclick*="sendChatMessage"]');if(send){send.id='chat-send-button';send.className='';send.innerHTML='<i class="fa-solid fa-paper-plane"></i>';send.title='إرسال الرسالة';send.setAttribute('aria-label','إرسال الرسالة');}
+        const preview=document.createElement('div');preview.id='chat-attachment-preview';footer.parentElement.insertBefore(preview,footer);
+        const wrap=document.createElement('div');wrap.className='chat-composer-wrap';footer.parentElement.insertBefore(wrap,footer);wrap.appendChild(footer);
+      }
+      const auto=document.getElementById('chat-auto-tts-toggle');if(auto){const label=auto.closest('label');if(label){label.classList.add('chat-tts-option');label.title='قراءة ردود المساعد بصوت مسموع';}}
+      const messages=document.getElementById('chat-messages-container');if(messages){messages.setAttribute('role','log');messages.setAttribute('aria-live','polite');}
+    }
+    const oldSwitch=window.switchTab;
+    window.switchTab=function(id){if(typeof oldSwitch==='function')oldSwitch(id);body.classList.toggle('chat-page',id==='chat-agent');body.classList.remove('sidebar-open');if(id==='chat-agent'){setTimeout(()=>document.getElementById('chat-input-text')?.focus({preventScroll:true}),80);}else{try{window.stopClinicVoiceConversation&&window.stopClinicVoiceConversation();}catch(e){}}};
+    document.querySelectorAll('#clinic-sidebar .nav-tab').forEach(btn=>btn.addEventListener('click',()=>body.classList.remove('sidebar-open')));
+    if(window.location.hash==='#chat')window.switchTab('chat-agent');
+    const chatBtn=document.getElementById('tab-btn-chat-agent');if(chatBtn){chatBtn.title='فتح مساحة محادثة مستقلة';}
+    window.addEventListener('keydown',e=>{if(e.key==='Escape'){body.classList.remove('sidebar-open');if(body.classList.contains('chat-page'))window.switchTab('receipt');}});
+  }
+  window.sendChatMessage=async function(){
+    const input=document.getElementById('chat-input-text'),typed=input?.value?.trim()||'',pending=window.clinicPendingAttachments||[],names=window.clinicPendingFileNames||[];
+    if(!typed&&!pending.length){input?.focus();return;}
+    const prompt=typed||(pending.length?'حلل الملفات المرفقة واشرح محتواها وأبرز المعلومات المهمة.':'');
+    const userText=prompt+(names.length?'\n📎 المرفقات: '+names.join('، '):'');
+    window.clinicSpeakingNow=false;window.appendChatMsg(userText,'user');if(input)input.value='';
+    const id=window.appendChatMsg('جارٍ تحليل الرسالة والمرفقات ذات الصلة…','ai',true),send=document.getElementById('chat-send-button');if(send)send.disabled=true;
+    try{
+      const r=await window.callAI(prompt,'أنت المساعد التنفيذي لعيادة الأسنان. استخدم سجلات العيادة المحددة والملفات المرفقة فقط، واذكر حدود التحليل بوضوح، ولا تخترع.');
+      document.getElementById(id)?.remove();window.appendChatMsg(r.result||'لم يصل رد نصي.','ai');
+      const badge=document.getElementById('chat-last-model-badge');if(badge)badge.textContent=r.provider||'AI';
+      if(document.getElementById('chat-auto-tts-toggle')?.checked){window.clinicSpeakingNow=true;await window.speakClinicText(r.result);window.clinicSpeakingNow=false;}
+      else if(window.clinicVoiceActive)setTimeout(()=>{if(window.clinicVoiceActive)window.startClinicListening();},300);
+    }catch(e){document.getElementById(id)?.remove();window.appendChatMsg('تعذر إكمال الطلب: '+(e?.message||'خطأ غير معروف'),'ai');}
+    finally{if(send)send.disabled=false;input?.focus({preventScroll:true});}
+  };
+  document.addEventListener('DOMContentLoaded',setupDocaiShell);
+})();
+</script>
 </body>
 </html>
