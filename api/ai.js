@@ -34,7 +34,7 @@ module.exports=async function(req,res){
  if(!prompt.trim())return sendError(res,400,'الرسالة فارغة.');
  if(Buffer.byteLength(prompt+system+ctx,'utf8')>180000)return sendError(res,413,'حجم السياق كبير. حدّد السؤال أو قسّم التقرير.');
  const attachments=Array.isArray(b.attachments)?b.attachments.slice(0,4):[];
- if(attachments.some(a=>String(a?.dataUrl||'').length>4500000))return sendError(res,413,'حجم المرفق كبير؛ قلّل الحجم.');
+ const imageBytes=attachments.reduce((n,a)=>n+String(a?.data||'').length,0);if(imageBytes>3900000||attachments.some(a=>String(a?.data||'').length>3500000))return sendError(res,413,'حجم الصور المرفقة كبير؛ أرفق صورة واحدة أصغر أو قلّل الجودة.');
  const id=String(b.model||'auto'),chosen=MODELS[id],list=chosen?[chosen]:Object.values(MODELS).filter(m=>String(keys[m.provider]||'').trim()).filter((m,i,a)=>a.findIndex(x=>x.provider===m.provider)===i);
  if(!list.length)return sendError(res,400,'أدخل مفتاح Gemini أو Groq أو OpenRouter في الإعدادات ثم افحص النماذج.');
  const errors=[];
