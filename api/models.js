@@ -12,7 +12,7 @@ async function test(m){
  let url,key,headers={'Content-Type':'application/json'},body;
  if(m.provider==='gemini'){key=process.env.GEMINI_API_KEY;if(!key)return null;url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m.model)+':generateContent?key='+encodeURIComponent(key);body={contents:[{parts:[{text:'Reply with exactly: OK'}]}],generationConfig:{temperature:0,maxOutputTokens:8}};}
  else{key=m.provider==='groq'?process.env.GROQ_API_KEY:process.env.OPENROUTER_API_KEY;if(!key)return null;url=m.provider==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://openrouter.ai/api/v1/chat/completions';headers.Authorization='Bearer '+key;if(m.provider==='openrouter'){headers['HTTP-Referer']='https://alssaedy-clinic-erp.vercel.app';headers['X-Title']='ALSSAEDY CLINIC ERP';}body={model:m.model,messages:[{role:'user',content:'Reply with exactly: OK'}],temperature:0,max_tokens:8};}
- const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(12000)});const d=await r.json().catch(()=>({}));
+ const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(7000)});const d=await r.json().catch(()=>({}));
  if(!r.ok)return null;
  const answer=m.provider==='gemini'?(d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join(''):(d.choices?.[0]?.message?.content||'');
  if(!String(answer).trim())return null;
