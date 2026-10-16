@@ -8,7 +8,7 @@ const MODELS={
 };
 function sendError(res,status,error){return res.status(status).json({error});}
 async function invoke(provider,model,prompt,system,keys,attachments=[]){
- const key=String(keys[provider]||'').trim();if(!key)throw Error('أدخل مفتاح '+provider.toUpperCase()+' من الإعدادات.');
+ const key=String(keys[provider]||'').trim();if(!key)throw Error('اضبط '+provider.toUpperCase()+'_API_KEY في Vercel أو أدخل المفتاح في الإعدادات.');
  let url,headers={'Content-Type':'application/json'},body;
  if(provider==='gemini'){
   url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key);
@@ -36,7 +36,7 @@ module.exports=async function(req,res){
  const attachments=Array.isArray(b.attachments)?b.attachments.slice(0,4):[];
  const imageBytes=attachments.reduce((n,a)=>n+String(a?.data||'').length,0);if(imageBytes>3900000||attachments.some(a=>String(a?.data||'').length>3500000))return sendError(res,413,'حجم الصور المرفقة كبير؛ أرفق صورة واحدة أصغر أو قلّل الجودة.');
  const id=String(b.model||'auto'),chosen=MODELS[id],tested=Array.isArray(b.verifiedModels)?b.verifiedModels.map(x=>MODELS[String(x)]).filter(Boolean):[],list=chosen?[chosen]:(id==='auto'?tested:Object.values(MODELS).filter(m=>m.id===id)).filter(m=>String(keys[m.provider]||'').trim());
- if(!list.length)return sendError(res,400,'أدخل مفتاح Gemini أو Groq أو OpenRouter في الإعدادات ثم افحص النماذج.');
+ if(!list.length)return sendError(res,400,'اضبط GEMINI_API_KEY أو GROQ_API_KEY أو OPENROUTER_API_KEY في Vercel، أو أدخل مفتاحاً في الإعدادات ثم افحص النماذج.');
  const errors=[];
  for(const m of list){try{const out=await invoke(m.provider,m.model,prompt+(ctx?'\n\nالسياق المحدد:\n'+ctx:''),system,keys,attachments);return res.status(200).json(out);}catch(e){errors.push(String(e.message||e));}}
  return sendError(res,502,'لم ينجح أي نموذج مختار: '+errors.slice(0,3).join(' | '));
