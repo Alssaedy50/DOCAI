@@ -1384,6 +1384,7 @@ document.addEventListener('DOMContentLoaded',function(){var main=document.queryS
 <script id="docai-sidebar-chat-behavior">
 (function(){
   function setupDocaiShell(){
+    window.sendChatMessage=docaiSendChatMessage;
     if(document.getElementById('clinic-sidebar')) return;
     const body=document.body,header=document.querySelector('body>header'),main=document.querySelector('body>main');
     const nav=header&&header.querySelector('nav');
@@ -1423,7 +1424,7 @@ document.addEventListener('DOMContentLoaded',function(){var main=document.queryS
     const chatBtn=document.getElementById('tab-btn-chat-agent');if(chatBtn){chatBtn.title='فتح مساحة محادثة مستقلة';}
     window.addEventListener('keydown',e=>{if(e.key==='Escape'){body.classList.remove('sidebar-open');if(body.classList.contains('chat-page'))window.switchTab('receipt');}});
   }
-  window.sendChatMessage=async function(){
+  const docaiSendChatMessage=async function(){
     const input=document.getElementById('chat-input-text'),typed=input?.value?.trim()||'',pending=window.clinicPendingAttachments||[],names=window.clinicPendingFileNames||[];
     if(!typed&&!pending.length){input?.focus();return;}
     const prompt=typed||(pending.length?'حلل الملفات المرفقة واشرح محتواها وأبرز المعلومات المهمة.':'');
