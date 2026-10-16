@@ -26,6 +26,6 @@ module.exports=async function(req,res){
  if(req.method!=='GET'&&req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed'});}
  const secret=process.env.SESSION_SECRET;if(!secret||secret.length<32||!process.env.CLINIC_APP_PASSWORD)return res.status(503).json({error:'إعداد الدخول غير مكتمل.'});
  if(!verified(req,secret))return res.status(401).json({error:'يلزم تسجيل الدخول.'});
- const results=[];for(const m of CANDIDATES){try{const v=await test(m);if(v)results.push(v);}catch(e){}}
+ const checks=await Promise.all(CANDIDATES.map(async m=>{try{return await test(m)}catch(e){return null}}));const results=checks.filter(Boolean);
  return res.status(200).json({testedAt:new Date().toISOString(),models:results,notice:'تظهر هنا النماذج التي أعادت استجابة اختبار ناجحة الآن فقط. قد تتغير الحصة أو الإتاحة بعد الاختبار.'});
 };
