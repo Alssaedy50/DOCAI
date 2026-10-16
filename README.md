@@ -27,7 +27,7 @@ Use the minimum patient details needed to answer. AI-generated text is advisory;
 
 ## Chat attachments
 
-Supported in the chat: PNG/JPEG/WebP/GIF images (Gemini key required), text-based PDF (extracts up to 12 pages), TXT, MD, CSV, JSON and LOG files. Maximum 5 files per message; image size is limited to about 2.5 MB and other files to 4 MB. Image analysis requires a model that passed the live check and a Gemini key. Scanned PDFs without a text layer are not OCR'd in this version; save/export their text or attach a readable image instead. DOCX/XLSX files are not currently parsed in the chat.
+Supported in the chat: PNG/JPEG/WebP/GIF images (Gemini key required), text-based PDF (extracts up to 12 pages), scanned PDF fallback as up to 2 page images (Gemini required), DOCX, XLSX/XLS, TXT, MD, CSV, JSON and LOG files. Maximum 5 files per message; image size is limited to about 2.5 MB and other files to 4 MB. Image analysis requires a model that passed the live check and a Gemini key. Scanned PDFs without a text layer are rendered as up to 2 page images for Gemini vision; this is visual analysis, not OCR text extraction. DOCX/XLSX parsing uses browser-loaded third-party libraries.
 
 ## Voice
 
