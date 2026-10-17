@@ -3,6 +3,19 @@ const DEFAULT_MODELS = {
   gemini: ["gemini-2.5-flash", "gemini-2.0-flash"],
   groq: ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
 };
+const requestWindows = new Map();
+function allowRequest(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const ip = forwarded || String(req.headers['x-real-ip'] || 'unknown');
+  const now = Date.now();
+  const current = requestWindows.get(ip);
+  if (!current || now - current.start >= 60000) {
+    requestWindows.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  current.count += 1;
+  return current.count <= 20;
+}
 function send(res, status, body) {
   res.status(status);
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -67,6 +80,7 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "GET, POST");
     return send(res, 405, { error: "الطريقة غير مدعومة" });
   }
+  if (!allowRequest(req)) return send(res, 429, { error: "تم تجاوز عدد الطلبات المؤقت. انتظر دقيقة ثم أعد المحاولة." });
   const body = req.body || {};
   const userPrompt = String(body.userPrompt || body.prompt || "").trim().slice(0, 16000);
   const systemPrompt = String(body.systemPrompt || "").slice(0, 12000);
