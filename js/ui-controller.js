@@ -965,7 +965,7 @@ window.updateModelSelectDropdown = function() {
   selects.forEach(sel => {
     const current = window.AppState.settings.ai.selectedMode || 'auto';
     sel.innerHTML = `<option value="auto">⚡ توجيه ذكي تلقائي</option>` +
-      availableModels.map(m => `<option value="${escapeHtml(m.id)}">🟢 ${escapeHtml(m.name)} (${escapeHtml(m.provider)})</option>`).join('');
+      availableModels.map(m => `<option value="${escapeHtml(m.id)}">🟢 ${escapeHtml(m.name)} (${escapeHtml(m.provider)} · ${m.free === true ? 'Free listing' : 'API quota'})</option>`).join('');
     sel.value = availableModels.some(m => m.id === current) ? current : 'auto';
     if (sel.value !== current && current !== 'auto') {
       window.AppState.settings.ai.selectedMode = 'auto';
@@ -1269,8 +1269,14 @@ window.addNewServiceRow = function() {
 };
 
 window.removeServiceRow = function(index) {
-  window.AppState.settings.services.splice(index, 1);
+  const services = window.AppState?.settings?.services;
+  if (!Array.isArray(services) || index < 0 || index >= services.length) return;
+  const service = services[index];
+  const label = String(service?.name || 'هذه الخدمة');
+  if (!window.confirm(`هل تريد حذف "${label}" من قائمة الخدمات؟ لن تُحذف السندات السابقة.`)) return;
+  services.splice(index, 1);
   window.renderSettingsServicesList();
+  if (window.showToast) window.showToast('تمت إزالة الخدمة من القائمة. اضغط حفظ الإعدادات لتثبيت التغيير.', 'info');
 };
 
 /* ==================== 11. التهيئة الشاملة للواجهة عند بدء التشغيل ==================== */

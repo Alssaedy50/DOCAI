@@ -47,6 +47,12 @@ async function testOneModel(model, settings) {
 }
 
 window.testAndDiscoverAllModels = async function() {
+  if (window.__docaiModelDiscoveryRunning) {
+    if (window.showToast) window.showToast('فحص النماذج جارٍ بالفعل؛ انتظر حتى يكتمل.', 'info');
+    return window.AI_MODELS_CATALOG || [];
+  }
+  window.__docaiModelDiscoveryRunning = true;
+  try {
   const settings = window.AppState?.settings?.ai || {};
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
@@ -61,7 +67,7 @@ window.testAndDiscoverAllModels = async function() {
       (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
         .filter(m => !/embedding|aqa|imagen|veo|tts/i.test(m.name || ''))
         .slice(0, AI_DISCOVERY_LIMIT)
-        .forEach(m => { const id = (m.name || '').replace(/^models\//, ''); if (id) discovered.push({ id, name: m.displayName || aiModelLabel(id, 'Gemini'), provider: 'gemini', free: true, vision: /vision|flash|pro/i.test(id), source: 'live' }); });
+        .forEach(m => { const id = (m.name || '').replace(/^models\//, ''); if (id) discovered.push({ id, name: m.displayName || aiModelLabel(id, 'Gemini'), provider: 'gemini', free: null, access: 'key-required', vision: /vision|flash|pro/i.test(id), source: 'live' }); });
       statuses.gemini = `${discovered.filter(m => m.provider === 'gemini').length} مرشحًا`;
     } catch (e) { statuses.gemini = `تعذر الاكتشاف: ${e.message}`; }
   } else statuses.gemini = 'أضف مفتاح Gemini في الإعدادات';
@@ -71,7 +77,7 @@ window.testAndDiscoverAllModels = async function() {
       const r = await fetchWithTimeout('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${settings.groqKey}` } });
       const d = await r.json(); if (!r.ok) throw new Error(d?.error?.message || `HTTP ${r.status}`);
       (d.data || []).filter(m => m.active !== false).filter(m => !/whisper|guard|embed|moderation|tts|orpheus/i.test(m.id || ''))
-        .slice(0, AI_DISCOVERY_LIMIT).forEach(m => discovered.push({ id: m.id, name: m.name || aiModelLabel(m.id, 'Groq'), provider: 'groq', free: true, vision: /vision/i.test(m.id), source: 'live' }));
+        .slice(0, AI_DISCOVERY_LIMIT).forEach(m => discovered.push({ id: m.id, name: m.name || aiModelLabel(m.id, 'Groq'), provider: 'groq', free: null, access: 'key-required', vision: /vision/i.test(m.id), source: 'live' }));
       statuses.groq = `${discovered.filter(m => m.provider === 'groq').length} مرشحًا`;
     } catch (e) { statuses.groq = `تعذر الاكتشاف: ${e.message}`; }
   } else statuses.groq = 'أضف مفتاح Groq في الإعدادات';
@@ -83,7 +89,7 @@ window.testAndDiscoverAllModels = async function() {
       const freeModels = (d.data || []).filter(m => String(m.id || '').endsWith(':free') || (Number(m.pricing?.prompt) === 0 && Number(m.pricing?.completion) === 0))
         .filter(m => !/embedding|moderation|audio|tts/i.test(m.id || ''))
         .slice(0, AI_DISCOVERY_LIMIT);
-      freeModels.forEach(m => discovered.push({ id: m.id, name: m.name || aiModelLabel(m.id, 'OpenRouter'), provider: 'openrouter', free: true, vision: /vision|vl|llava|gemini/i.test(`${m.id} ${m.name || ''}`), source: 'live' }));
+      freeModels.forEach(m => discovered.push({ id: m.id, name: m.name || aiModelLabel(m.id, 'OpenRouter'), provider: 'openrouter', free: true, access: 'free-tier-listed', vision: /vision|vl|llava|gemini/i.test(`${m.id} ${m.name || ''}`), source: 'live' }));
       statuses.openrouter = `${freeModels.length} مرشحًا مجانيًا`;
     } catch (e) { statuses.openrouter = `تعذر الاكتشاف: ${e.message}`; }
   } else statuses.openrouter = 'أضف مفتاح OpenRouter في الإعدادات';
@@ -112,6 +118,9 @@ window.testAndDiscoverAllModels = async function() {
   if (window.showToast) window.showToast(`اكتمل الفحص: ${verified.length} نموذجًا اجتاز اختبارًا فعليًا. ${verified.length < 25 ? 'لم تتوفر 25 نماذج عاملة بالمفاتيح والحصص الحالية.' : 'تحقق هدف 25 نموذجًا.'}`, verified.length ? 'success' : 'warning');
   console.info('[DOCAI model discovery]', statusText, verified.map(m => `${m.provider}/${m.id}`));
   return verified;
+  } finally {
+    window.__docaiModelDiscoveryRunning = false;
+  }
 };
 
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
