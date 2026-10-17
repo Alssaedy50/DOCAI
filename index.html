@@ -52,7 +52,7 @@
     body { min-width: 320px; }
     button, input, select, textarea { min-width: 0; }
     img, canvas { max-width: 100%; }
-    #receipt-qr-box { width: 80px; min-width: 80px; min-height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #receipt-qr-box { width: 112px; min-width: 112px; min-height: 112px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     #receipt-qr-box canvas, #receipt-qr-box img { width: 88px !important; height: 88px !important; max-width: none; display: block; image-rendering: pixelated; }
     @media (max-width: 640px) {
       header > div { align-items: flex-start; }
@@ -93,6 +93,8 @@
       #receipt-capture-area { padding: 10px !important; font-size: 11px; }
       #receipt-capture-area > .relative.z-10.flex.items-center.justify-between { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
       #receipt-capture-area .clinic-logo-img { width: 42px !important; height: 42px !important; }
+      #receipt-qr-box { width: 96px; min-width: 96px; min-height: 96px; }
+      #receipt-qr-box canvas, #receipt-qr-box img { width: 80px !important; height: 80px !important; }
       #receipt-capture-area .text-base, #receipt-capture-area .sm\:text-lg { font-size: 12px !important; }
       #receipt-capture-area .px-4 { padding-left: 8px !important; padding-right: 8px !important; }
       #receipt-preview-wrapper > div:first-child { flex-wrap: wrap; }
