@@ -52,8 +52,10 @@
     body { min-width: 320px; }
     button, input, select, textarea { min-width: 0; }
     img, canvas { max-width: 100%; }
-    #receipt-qr-box { width: 80px; min-width: 80px; min-height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    #receipt-qr-box canvas, #receipt-qr-box img { width: 72px !important; height: 72px !important; max-width: none; display: block; image-rendering: pixelated; }
+    #receipt-qr-box { width: 88px; min-width: 88px; min-height: 88px; display: flex; align-items: center; justify-content: center; overflow: visible; background: #fff; padding: 4px; }
+    #receipt-qr-box canvas, #receipt-qr-box img { width: 80px !important; height: 80px !important; max-width: none; display: block; image-rendering: pixelated; }
+    #receipt-capture-area .clinic-logo-img { width: 68px; height: 68px; object-fit: contain; opacity: 1; filter: none; }
+    @media print { #preview-watermark-img { opacity: 0.025 !important; } #receipt-capture-area .clinic-logo-img { width: 68px !important; height: 68px !important; } }
     @media (max-width: 640px) {
       header > div { align-items: flex-start; }
       header .clinic-logo-img { width: 36px; height: 36px; }
@@ -299,28 +301,11 @@
       <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 space-y-2.5">
         <div class="text-xs font-extrabold text-amber-400">🎙️ نظام الصوت المزدوج (الهاتف vs السحابي)</div>
         <div id="active-stt-badge" class="text-[11px] text-sky-300 font-bold">🎙️ الإدخال: صوت النماذج السحابية (AI)</div>
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" onclick="window.setVoiceEngineMode('stt', 'phone_native')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
-            📱 مايك الهاتف
-          </button>
-          <button type="button" onclick="window.setVoiceEngineMode('stt', 'ai_cloud')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
-            ☁️ مايك النماذج AI
-          </button>
-        </div>
-
         <div id="active-tts-badge" class="text-[11px] text-emerald-300 font-bold pt-1">🔊 النطق: صوت النماذج السحابية (AI)</div>
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" onclick="window.setVoiceEngineMode('tts', 'phone_native')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
-            📱 نطق الهاتف
-          </button>
-          <button type="button" onclick="window.setVoiceEngineMode('tts', 'ai_cloud')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
-            ☁️ نطق النماذج AI
-          </button>
-        </div>
+        <button type="button" onclick="window.switchMainTab('settings')"
+          class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-sky-200 border border-slate-700">
+          ⚙️ تغيير إعدادات الصوت من صفحة الإعدادات
+        </button>
       </div>
 
       <!-- النسخ الاحتياطي السريع -->
