@@ -583,7 +583,7 @@ function runLiveCallListeningCycle() {
   }
 }
 
-async function startCloudLiveCallCycle() {
+async async function startCloudLiveCallCycle() {
   if (!window.VoiceVisionState.liveCallActive || window.VoiceVisionState.cloudLiveCycleRunning) return;
   window.VoiceVisionState.cloudLiveCycleRunning = true;
   let stream;
