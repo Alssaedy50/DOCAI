@@ -1269,8 +1269,14 @@ window.addNewServiceRow = function() {
 };
 
 window.removeServiceRow = function(index) {
-  window.AppState.settings.services.splice(index, 1);
+  const services = window.AppState?.settings?.services;
+  if (!Array.isArray(services) || index < 0 || index >= services.length) return;
+  const service = services[index];
+  const label = String(service?.name || 'هذه الخدمة');
+  if (!window.confirm(`هل تريد حذف "${label}" من قائمة الخدمات؟ لن تُحذف السندات السابقة.`)) return;
+  services.splice(index, 1);
   window.renderSettingsServicesList();
+  if (window.showToast) window.showToast('تمت إزالة الخدمة من القائمة. اضغط حفظ الإعدادات لتثبيت التغيير.', 'info');
 };
 
 /* ==================== 11. التهيئة الشاملة للواجهة عند بدء التشغيل ==================== */
