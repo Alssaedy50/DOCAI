@@ -172,7 +172,22 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   }
   if (requested === 'auto') {
     candidates.sort((a,b) => ({gemini:0,groq:1,openrouter:2}[a.provider] ?? 9) - ({gemini:0,groq:1,openrouter:2}[b.provider] ?? 9));
-    candidates = candidates.slice(0, 3);
+    // Use one verified candidate per configured provider, then a bounded direct fallback.
+    // This avoids three stale Gemini IDs preventing a working Groq/OpenRouter fallback.
+    const defaults = [];
+    if (settings.geminiKey) defaults.push({ id: 'gemini-2.5-flash', provider: 'gemini' });
+    if (settings.groqKey) defaults.push({ id: 'llama-3.3-70b-versatile', provider: 'groq' });
+    if (settings.openrouterKey) defaults.push({ id: 'meta-llama/llama-3.3-70b-instruct:free', provider: 'openrouter' });
+    const pool = new Map();
+    for (const model of [...candidates, ...defaults]) {
+      if (!settings[`${model.provider}Key`]) continue;
+      const key = `${model.provider}:${model.id}`;
+      if (!pool.has(key)) pool.set(key, model);
+    }
+    candidates = ['gemini', 'groq', 'openrouter']
+      .map(provider => [...pool.values()].find(model => model.provider === provider))
+      .filter(Boolean)
+      .slice(0, 3);
   }
   let lastError;
   const timeoutMs = Math.max(5000, Math.min(Number(options.timeoutMs) || 10000, 20000));
