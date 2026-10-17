@@ -507,7 +507,8 @@ window.ClinicDB = {
       contextPacket.clinicServicesCatalog = window.AppState.settings.services;
     }
 
-    if (asksAllOrReceipts || (!asksInventory && !asksExpenses && !asksDebts && matchedPatientReceipts.length === 0)) {
+    // لا تُرفق سجلات العيادة في الأسئلة العامة؛ هذا يقلل حجم الطلب وزمن الاستجابة.
+    if (asksAllOrReceipts) {
       contextPacket.recentReceiptsCompact = receipts.slice(0, 80).map(r => ({
         no: r.receiptNo,
         date: r.date,
