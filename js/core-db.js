@@ -159,6 +159,7 @@ window.AppState = {
   expenses: safeLoadStorage(STORAGE_KEYS.EXPENSES, 'alssaedy_erp_e_v2', []),
   verifiedModels: safeLoadStorage(STORAGE_KEYS.VERIFIED_MODELS, null, []),
   selectedServices: new Set(),
+  selectedServiceIds: new Set(),
   currentPreviousDebt: 0,
   editingReceiptId: null,
   editingInventoryId: null,
