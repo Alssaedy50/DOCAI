@@ -101,6 +101,15 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     if (el.classList.contains('no-export') || el.classList.contains('no-print')) {
       el.style.display = 'none';
     }
+    // Keep the clinic logo crisp and prevent the watermark from competing with receipt text.
+    if (el.id === 'preview-watermark-img') el.style.opacity = '0.02';
+    if (el.classList.contains('clinic-logo-img')) {
+      el.style.width = '72px';
+      el.style.height = '72px';
+      el.style.objectFit = 'contain';
+      el.style.opacity = '1';
+      el.style.filter = 'none';
+    }
   });
 
   offscreenWrapper.appendChild(clone);
