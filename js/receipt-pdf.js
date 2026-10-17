@@ -84,6 +84,13 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
   clone.style.background = '#ffffff';
   clone.style.fontFamily = "'Cairo', sans-serif";
   clone.style.letterSpacing = '0px';
+  clone.querySelectorAll('.clinic-logo-img').forEach(img => {
+    img.style.width = '68px';
+    img.style.height = '68px';
+    img.style.maxWidth = '68px';
+    img.style.objectFit = 'contain';
+    img.style.imageRendering = 'auto';
+  });
 
   // إزالة جميع الكلاسات التي تسبب تداخل الحروف العربية أو قص النصوص في html2canvas
   const allElements = clone.querySelectorAll('*');
