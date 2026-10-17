@@ -508,7 +508,7 @@ window.ClinicDB = {
     }
 
     // لا تُرفق سجلات العيادة في الأسئلة العامة؛ هذا يقلل حجم الطلب وزمن الاستجابة.
-    if (asksAllOrReceipts && (matchedPatientReceipts.length === 0 || /سندات|تقرير|راجع|جميع|كل|اليوم|شهر|إيراد|ايراد|قبض/.test(q))) {
+    if (asksAllOrReceipts && /سندات|تقرير|راجع|جميع|كل|اليوم|شهر|إيراد|ايراد|قبض/.test(q)) {
       contextPacket.recentReceiptsCompact = receipts.slice(0, 80).map(r => ({
         no: r.receiptNo,
         date: r.date,
