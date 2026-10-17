@@ -1,0 +1,15 @@
+*.pem
+*.key
+node_modules/
+.vercel/
+secure-keys/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+node_modules/
+.vercel/
+secure-keys/
+.DS_Store

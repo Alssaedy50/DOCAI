@@ -1,0 +1,1093 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>نظام عيادة د. صلاح الدين السعيدي - DOCAI GEMINI ERP</title>
+
+  <!-- الخط العربي الرسمي Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- مكتبات التصدير: html2canvas + jsPDF + QRCode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'"></script>
+
+  <style>
+    :root {
+      --clinic-primary: #0B2545;
+      --clinic-secondary: #1d6fa5;
+      --clinic-accent: #00A8E8;
+    }
+
+    * {
+      font-family: 'Cairo', sans-serif !important;
+      letter-spacing: 0px !important;
+    }
+
+    body {
+      background-color: #070e1a;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+
+    .clinic-gradient-header {
+      background: linear-gradient(135deg, var(--clinic-primary), var(--clinic-secondary));
+    }
+
+    .receipt-paper {
+      background: #ffffff;
+      color: #0f172a;
+      border: 2px solid var(--clinic-primary);
+    }
+
+    /* Mobile-first layout hardening */
+    html { -webkit-text-size-adjust: 100%; }
+    body { min-width: 320px; }
+    button, input, select, textarea { min-width: 0; }
+    img, canvas { max-width: 100%; }
+    #receipt-qr-box { width: 80px; min-width: 80px; min-height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #receipt-qr-box canvas, #receipt-qr-box img { width: 72px !important; height: 72px !important; max-width: none; display: block; image-rendering: pixelated; }
+    @media (max-width: 640px) {
+      header > div { align-items: flex-start; }
+      header .clinic-logo-img { width: 36px; height: 36px; }
+      #header-system-title { max-width: 54vw; font-size: 13px; }
+      #header-system-badge { max-width: 54vw; font-size: 9px; }
+      header .ai-model-selector { max-width: 46vw; }
+      main { padding-left: 10px !important; padding-right: 10px !important; padding-top: 12px !important; }
+      #receipt-capture-area { padding: 12px !important; border-radius: 12px !important; }
+      #receipt-capture-area .text-2xl { font-size: 1.2rem !important; }
+      #tab-section-inventory, #tab-section-finance, #tab-section-records { overflow-x: hidden; }
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+    }
+
+    /* إعدادات الطباعة النظيفة لحل مشكلة الصفحة الفارغة نهائياً */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      main, #tab-section-receipt, #receipt-preview-wrapper {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #receipt-capture-area {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: 2px solid #0B2545 !important;
+        margin: 0 auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ==================== الهيدر العلوي ==================== -->
+  <header class="clinic-gradient-header border-b border-sky-500/30 sticky top-0 z-30 shadow-xl no-print">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <!-- زر القائمة الجانبية + الشعار والعنوان -->
+      <div class="flex items-center gap-3">
+        <button type="button" onclick="window.toggleSidebarDrawer(true)"
+          class="p-2.5 rounded-xl bg-black/25 hover:bg-black/40 border border-white/15 text-white shadow-md"
+          title="فتح القائمة الجانبية والإعدادات السريعة">
+          ☰
+        </button>
+        <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Logo"
+          class="clinic-logo-img w-11 h-11 rounded-xl bg-white p-1 object-contain shadow-md" crossorigin="anonymous" />
+        <div>
+          <h1 id="header-system-title" class="text-base sm:text-lg font-black text-white leading-tight">
+            نظام عيادة د. صلاح الدين السعيدي
+          </h1>
+          <span id="header-system-badge" class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-500/30 border border-sky-300/40 text-sky-100">
+            طب وجراحة الفم والأسنان
+          </span>
+        </div>
+      </div>
+
+      <!-- مؤشرات الصوت + اختيار النموذج السريع + المكالمة الحية -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="voice-active-status-badge" class="hidden px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold animate-pulse">
+          🔴 يستمع الآن...
+        </span>
+        <button id="stop-tts-btn" type="button" onclick="window.stopSpeaking()"
+          class="hidden px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold shadow">
+          🔇 إيقاف النطق
+        </button>
+        <select onchange="window.onQuickModelChange(this)"
+          class="ai-model-selector bg-slate-900/90 border border-sky-400/40 text-white text-xs font-bold rounded-xl px-2.5 py-2 max-w-[190px]">
+          <option value="auto">⚡ توجيه ذكي تلقائي</option>
+        </select>
+        <button type="button" onclick="window.toggleLiveVoiceCall()"
+          class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg flex items-center gap-1.5">
+          <span>📞</span><span class="hidden sm:inline">مكالمة صوتية حية</span>
+        </button>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- ==================== القائمة الجانبية المنبثقة (Slide-out Drawer) ==================== -->
+  <div id="sidebar-backdrop" onclick="window.toggleSidebarDrawer(false)"
+    class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40 no-print"></div>
+
+  <aside id="sidebar-drawer"
+    class="fixed top-0 right-0 h-full w-80 max-w-[88vw] bg-slate-900 border-l border-sky-500/30 z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between overflow-y-auto no-print shadow-2xl">
+    <div class="p-4 space-y-4">
+      <!-- رأس القائمة الجانبية -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Logo"
+            class="clinic-logo-img w-10 h-10 rounded-xl bg-white p-1 object-contain" crossorigin="anonymous" />
+          <div>
+            <div id="drawer-clinic-title" class="font-extrabold text-sm text-white">نظام عيادة د. صلاح الدين السعيدي</div>
+            <div id="drawer-doctor-name" class="text-xs text-sky-400 font-bold">د. صلاح الدين السعيدي</div>
+          </div>
+        </div>
+        <button type="button" onclick="window.toggleSidebarDrawer(false)"
+          class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold">✕</button>
+      </div>
+
+      <!-- التنقل السريع -->
+      <div class="space-y-1.5">
+        <div class="text-xs font-extrabold text-slate-400 px-1">أقسام النظام</div>
+        <button id="drawer-btn-receipt" type="button" onclick="window.switchMainTab('receipt')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>🧾</span><span>إصدار سند قبض ومعاينة</span>
+        </button>
+        <button id="drawer-btn-records" type="button" onclick="window.switchMainTab('records')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>📂</span><span>سجل السندات ومتابعة الديون</span>
+        </button>
+        <button id="drawer-btn-inventory" type="button" onclick="window.switchMainTab('inventory')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>📦</span><span>المخزون الطبي (استهلاك / تزويد)</span>
+        </button>
+        <button id="drawer-btn-finance" type="button" onclick="window.switchMainTab('finance')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>📊</span><span>التقارير المالية والمصروفات</span>
+        </button>
+        <button id="drawer-btn-ai-chat" type="button" onclick="window.switchMainTab('ai-chat')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>🤖</span><span>المساعد الذكي وتحليل الصور</span>
+        </button>
+        <button id="drawer-btn-settings" type="button" onclick="window.switchMainTab('settings')"
+          class="w-full text-right px-3 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-bold flex items-center gap-2">
+          <span>⚙️</span><span>تخصيص الهوية والإعدادات</span>
+        </button>
+      </div>
+
+      <!-- التبديل السريع بين صوت الهاتف وصوت النماذج السحابية -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 space-y-2.5">
+        <div class="text-xs font-extrabold text-amber-400">🎙️ نظام الصوت المزدوج (الهاتف vs السحابي)</div>
+        <div id="active-stt-badge" class="text-[11px] text-sky-300 font-bold">🎙️ الإدخال: صوت النماذج السحابية (AI)</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" onclick="window.setVoiceEngineMode('stt', 'phone_native')"
+            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
+            📱 مايك الهاتف
+          </button>
+          <button type="button" onclick="window.setVoiceEngineMode('stt', 'ai_cloud')"
+            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
+            ☁️ مايك النماذج AI
+          </button>
+        </div>
+
+        <div id="active-tts-badge" class="text-[11px] text-emerald-300 font-bold pt-1">🔊 النطق: صوت النماذج السحابية (AI)</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" onclick="window.setVoiceEngineMode('tts', 'phone_native')"
+            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
+            📱 نطق الهاتف
+          </button>
+          <button type="button" onclick="window.setVoiceEngineMode('tts', 'ai_cloud')"
+            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
+            ☁️ نطق النماذج AI
+          </button>
+        </div>
+      </div>
+
+      <!-- النسخ الاحتياطي السريع -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <div class="text-xs font-extrabold text-sky-400">💾 النسخ الاحتياطي والتصدير السريع</div>
+        <button type="button" onclick="window.exportLocalBackupJSON()"
+          class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold">
+          ⬇️ تحميل نسخة احتياطية كاملة (JSON)
+        </button>
+        <label class="block w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold text-center cursor-pointer">
+          ⬆️ استيراد ملف نسخة احتياطية (JSON)
+          <input type="file" accept=".json" onchange="window.importLocalBackupJSON(event)" class="hidden" />
+        </label>
+        <div class="grid grid-cols-2 gap-1.5 pt-1">
+          <button type="button" onclick="window.syncDataToCloud()"
+            class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[11px] font-bold border border-slate-700">
+            ☁️ رفع للسحابة
+          </button>
+          <button type="button" onclick="window.syncDataFromCloud()"
+            class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-[11px] font-bold border border-slate-700">
+            ☁️ جلب من السحابة
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 border-t border-slate-800 text-center text-[11px] text-slate-400">
+      DOCAI-GEMINI ERP v3.0 — ALSSAEDY CLINIC
+    </div>
+  </aside>
+
+  <!-- ==================== المحتوى الرئيسي (بدون no-print على وسم main) ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5">
+
+    <!-- ==================== القسم 1: إصدار سند قبض + المعاينة الحية ==================== -->
+    <section id="tab-section-receipt" class="space-y-5">
+
+      <!-- شريط الإدخال الصوتي والنصي الذكي للسند -->
+      <div id="smart-ai-receipt-bar" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-sky-500/40 rounded-2xl p-3.5 shadow-lg no-print">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="flex items-center gap-2 text-xs font-extrabold text-sky-300 shrink-0">
+            <span class="text-lg">✨</span>
+            <span>الإدخال الذكي للسند (صوت أو نص):</span>
+          </div>
+          <input id="ai-smart-input" type="text"
+            placeholder="مثال: سند للمريض محمد علي هاتف 771234567 حشوة ضوئية وعلاج عصب الإجمالي 23000 دفع 15000..."
+            class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:border-sky-400 focus:outline-none" />
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="window.toggleReceiptVoiceInput()"
+              class="voice-record-btn px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow">
+              <span>🎙️</span><span>إملاء صوتي</span>
+            </button>
+            <button type="button" onclick="window.handleSmartBarParse()"
+              class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold shadow">
+              🤖 تعبئة تلقائية
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- تنبيه الديون السابقة للمريض -->
+      <div id="patient-debt-alert-box" class="hidden bg-amber-500/20 border-2 border-amber-400 text-amber-200 rounded-2xl p-3 text-xs font-bold no-print"></div>
+
+      <!-- شبكة نموذج الإدخال + بطاقة المعاينة الحية -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- نموذج إدخال بيانات السند (يمين) -->
+        <div class="lg:col-span-5 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl no-print">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-black text-sky-400">📝 بيانات سند القبض</h2>
+            <button type="button" onclick="window.resetReceiptForm()"
+              class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">
+              🔄 سند جديد
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">رقم السند</label>
+              <input id="rec-no" type="text" oninput="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-extrabold text-amber-300" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">التاريخ</label>
+              <input id="rec-date" type="date" oninput="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">اسم المريض</label>
+              <input id="rec-patient-name" type="text" list="patients-datalist"
+                placeholder="الاسم الثلاثي للمريض"
+                oninput="window.checkPatientPreviousDebtUI(); window.updateLiveReceiptPreview();"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+              <datalist id="patients-datalist"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف (للواتساب)</label>
+              <input id="rec-patient-phone" type="tel" dir="ltr" placeholder="77xxxxxxx"
+                oninput="window.checkPatientPreviousDebtUI(); window.updateLiveReceiptPreview();"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white text-right" />
+            </div>
+          </div>
+
+          <!-- أزرار اختيار الخدمات العلاجية السريعة -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-2">🦷 اختر الخدمات العلاجية (تُسعّر تلقائياً):</label>
+            <div id="services-chips-container" class="grid grid-cols-2 gap-2"></div>
+          </div>
+
+          <!-- المبالغ المالية -->
+          <div class="grid grid-cols-3 gap-2.5 pt-1">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">إجمالي المبلغ</label>
+              <input id="rec-total-amount" type="number" placeholder="0"
+                oninput="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-black text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-emerald-400 mb-1">المبلغ المقبوض</label>
+              <input id="rec-paid-amount" type="number" placeholder="0"
+                oninput="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-emerald-500/60 rounded-xl px-3 py-2 text-sm font-black text-emerald-300" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-rose-400 mb-1">المتبقي (دين)</label>
+              <input id="rec-remaining-amount" type="number" readonly
+                class="w-full bg-slate-900 border border-rose-500/40 rounded-xl px-3 py-2 text-sm font-black text-rose-300" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">العملة</label>
+              <select id="rec-currency" onchange="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white">
+                <option value="ريال يمني">ريال يمني</option>
+                <option value="ريال سعودي">ريال سعودي</option>
+                <option value="دولار أمريكي">دولار أمريكي</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">طريقة الدفع</label>
+              <select id="rec-payment-method" onchange="window.updateLiveReceiptPreview()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white">
+                <option value="نقداً (Cash)">نقداً (Cash)</option>
+                <option value="تحويل كريمي / محفظة">تحويل كريمي / محفظة</option>
+                <option value="شبكة / بطاقة">شبكة / بطاقة</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">المبلغ كتابةً (تفقيط تلقائي)</label>
+            <input id="rec-amount-words" type="text" readonly
+              class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-amber-300" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">ملاحظات أو تفاصيل إضافية</label>
+            <input id="rec-notes" type="text" placeholder="ملاحظات الطبيب أو موعد الجلسة القادمة..."
+              oninput="window.updateLiveReceiptPreview()"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+          </div>
+
+          <!-- أزرار التوقيع الإلكتروني -->
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button type="button" onclick="window.openSignatureModal('accountant')"
+              class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-sky-300">
+              ✍️ توقيع الطبيب / المحاسب
+            </button>
+            <button type="button" onclick="window.openSignatureModal('receiver')"
+              class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-amber-300">
+              ✍️ توقيع المريض / المستلم
+            </button>
+          </div>
+
+          <!-- أزرار الحفظ والتصدير (PDF / HD Image / Print / WhatsApp) -->
+          <div class="space-y-2.5 pt-2 border-t border-slate-800">
+            <button type="button" onclick="window.saveCurrentReceiptFromUI()"
+              class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg">
+              💾 حفظ السند في السجل وخصم المستهلكات
+            </button>
+
+            <div class="flex items-center gap-2">
+              <select id="pdf-paper-size-select"
+                class="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2.5 text-xs font-bold text-white">
+                <option value="a5">قياس A5 قياسي</option>
+                <option value="80mm">حراري 80mm</option>
+              </select>
+              <button type="button" onclick="window.exportReceiptAsPDF()"
+                class="flex-1 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold shadow">
+                📄 تحميل ملف PDF مباشر
+              </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="window.exportReceiptAsImageMobile(false)"
+                class="py-2.5 px-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold shadow">
+                📸 صورة HD
+              </button>
+              <button type="button" onclick="window.printReceiptNow()"
+                class="py-2.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow">
+                🖨️ طباعة
+              </button>
+              <button type="button" onclick="window.shareReceiptViaWhatsApp()"
+                class="py-2.5 px-2 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-extrabold shadow">
+                💬 واتساب
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- معاينة السند الحية القابلة للطباعة والتصوير (يسار) -->
+        <div id="receipt-preview-wrapper" class="lg:col-span-7">
+          <div id="receipt-capture-area" class="receipt-paper rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+
+            <!-- العلامة المائية في الخلفية -->
+            <img id="preview-watermark-img" src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png"
+              alt="Watermark" crossorigin="anonymous"
+              class="pointer-events-none select-none absolute inset-0 m-auto w-64 h-64 object-contain"
+              style="opacity: 0.06;" />
+
+            <!-- ترويسة السند الثلاثية -->
+            <div class="relative z-10 flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-4 gap-3">
+              <!-- يمين: بيانات العيادة بالعربية -->
+              <div class="text-right space-y-0.5">
+                <div id="preview-doctor-ar" class="text-base sm:text-lg font-black text-slate-900">د. صلاح الدين السعيدي</div>
+                <div id="preview-specialty-ar" class="text-xs font-extrabold text-sky-800">طب وجراحة الفم والأسنان</div>
+              </div>
+
+              <!-- وسط: الشعار وعنوان السند -->
+              <div class="flex flex-col items-center">
+                <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Clinic Logo"
+                  class="clinic-logo-img w-14 h-14 object-contain mb-1" crossorigin="anonymous" />
+                <div class="px-4 py-1 rounded-full bg-slate-900 text-white text-xs font-black">
+                  سند قبض مالي | RECEIPT VOUCHER
+                </div>
+              </div>
+
+              <!-- يسار: بيانات العيادة بالإنجليزية -->
+              <div class="text-left space-y-0.5" dir="ltr">
+                <div id="preview-clinic-en" class="text-xs sm:text-sm font-black text-slate-900">ALSSAEDY CLINIC FOR DENTISTRY</div>
+                <div id="preview-doctor-en" class="text-xs font-bold text-sky-800">Dr. Salahaldeen Alssaedy</div>
+              </div>
+            </div>
+
+            <!-- شريط رقم السند والتاريخ وطريقة الدفع -->
+            <div class="relative z-10 grid grid-cols-3 gap-2 bg-slate-100 border border-slate-300 rounded-xl p-2.5 mb-4 text-xs">
+              <div>
+                <span class="text-slate-500 font-bold">رقم السند:</span>
+                <span id="preview-rec-no" class="font-black text-rose-700 mr-1">#1001</span>
+              </div>
+              <div class="text-center">
+                <span class="text-slate-500 font-bold">التاريخ:</span>
+                <span id="preview-rec-date" class="font-extrabold text-slate-900 mr-1">2026-10-17</span>
+              </div>
+              <div class="text-left">
+                <span class="text-slate-500 font-bold">الدفع:</span>
+                <span id="preview-payment-method" class="font-extrabold text-slate-900 mr-1">نقداً (Cash)</span>
+              </div>
+            </div>
+
+            <!-- تفاصيل المريض والخدمات -->
+            <div class="relative z-10 space-y-2.5 text-xs sm:text-sm mb-4">
+              <div class="flex items-center justify-between border-b border-dashed border-slate-300 pb-2">
+                <div>
+                  <span class="font-bold text-slate-600">استلمنا من المريض المكرم:</span>
+                  <span id="preview-patient-name" class="font-black text-slate-950 mr-2">................................................</span>
+                </div>
+                <div>
+                  <span class="font-bold text-slate-600">هاتف:</span>
+                  <span id="preview-patient-phone" dir="ltr" class="font-bold text-slate-800 mr-1">—</span>
+                </div>
+              </div>
+
+              <div class="border-b border-dashed border-slate-300 pb-2">
+                <span class="font-bold text-slate-600">وذلك مقابل (الخدمات العلاجية):</span>
+                <span id="preview-services-text" class="font-extrabold text-sky-900 mr-2">كشف وخدمات علاجية للأسنان</span>
+              </div>
+
+              <div class="border-b border-dashed border-slate-300 pb-2">
+                <span class="font-bold text-slate-600">مبلغاً وقدره كتابةً:</span>
+                <span id="preview-amount-words" class="font-extrabold text-slate-900 mr-2">صفر ريال يمني لا غير</span>
+              </div>
+            </div>
+
+            <!-- الصناديق المالية الثلاثة -->
+            <div class="relative z-10 grid grid-cols-3 gap-3 mb-4 text-center">
+              <div class="bg-slate-100 border border-slate-300 rounded-xl p-2.5">
+                <div class="text-[11px] font-bold text-slate-600">إجمالي قيمة العلاج</div>
+                <div id="preview-total-amount" class="text-sm sm:text-base font-black text-slate-900 mt-0.5">0 ريال يمني</div>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-300 rounded-xl p-2.5">
+                <div class="text-[11px] font-bold text-emerald-700">المبلغ المقبوض</div>
+                <div id="preview-paid-amount" class="text-sm sm:text-base font-black text-emerald-800 mt-0.5">0 ريال يمني</div>
+              </div>
+              <div id="preview-remaining-box" class="bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl p-2.5">
+                <div class="text-[11px] font-bold">المتبقي على المريض</div>
+                <div id="preview-remaining-amount" class="text-sm sm:text-base font-black mt-0.5">0 ريال يمني</div>
+              </div>
+            </div>
+
+            <!-- ملاحظات + التوقيعات + رمز QR -->
+            <div class="relative z-10 grid grid-cols-12 gap-3 items-center pt-2 border-t border-slate-300">
+              <div class="col-span-4 text-center">
+                <div class="text-[11px] font-extrabold text-slate-700 mb-1">توقيع الطبيب / المحاسب</div>
+                <div class="h-14 border border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
+                  <img id="preview-accountant-sig-img" class="hidden max-h-12 object-contain" alt="Accountant Signature" />
+                  <span id="preview-accountant-sig-placeholder" class="text-[10px] text-slate-400">التوقيع والختم</span>
+                </div>
+              </div>
+
+              <div class="col-span-4 flex flex-col items-center justify-center">
+                <div id="receipt-qr-box" class="p-1 bg-white border border-slate-200 rounded-lg"></div>
+                <div id="preview-notes" class="text-[10px] font-bold text-slate-600 text-center mt-1">
+                  نتمنى لكم دوام الصحة والابتسامة المشرقة
+                </div>
+              </div>
+
+              <div class="col-span-4 text-center">
+                <div class="text-[11px] font-extrabold text-slate-700 mb-1">توقيع المريض / المستلم</div>
+                <div class="h-14 border border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
+                  <img id="preview-receiver-sig-img" class="hidden max-h-12 object-contain" alt="Receiver Signature" />
+                  <span id="preview-receiver-sig-placeholder" class="text-[10px] text-slate-400">توقيع المستلم</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- تذييل العنوان وأرقام الهواتف -->
+            <div class="relative z-10 mt-4 pt-2.5 border-t-2 border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] font-bold text-slate-700 gap-1">
+              <div>📍 العنوان: <span id="preview-address">ريمة - كسمة - عزلة الضبارة</span></div>
+              <div dir="ltr">📞 <span id="preview-phones">+967 716 339 366 | +967 739 550 138 | +967 775 956 520</span></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== القسم 2: سجل السندات والديون ==================== -->
+    <section id="tab-section-records" class="hidden space-y-4 no-print">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <h2 class="text-base font-black text-sky-400">📂 سجل السندات ومتابعة ديون المرضى</h2>
+          <div class="flex items-center gap-2 flex-wrap">
+            <input id="records-search-input" type="text" oninput="window.renderRecordsTable()"
+              placeholder="🔍 ابحث باسم المريض، الهاتف، أو رقم السند..."
+              class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white min-w-[230px]" />
+            <select id="records-filter-status" onchange="window.renderRecordsTable()"
+              class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white">
+              <option value="all">جميع السندات</option>
+              <option value="debt">السندات ذات الديون المتبقية فقط</option>
+              <option value="paid">السندات الخالصة فقط</option>
+            </select>
+            <button type="button" onclick="window.exportDataToCSV('receipts')"
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold">
+              📊 تصدير لـ Excel (CSV)
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-slate-300 text-xs border-b border-slate-800">
+                <th class="py-3 px-3">رقم السند</th>
+                <th class="py-3 px-3">التاريخ</th>
+                <th class="py-3 px-3">اسم المريض</th>
+                <th class="py-3 px-3">رقم الهاتف</th>
+                <th class="py-3 px-3">الخدمات العلاجية</th>
+                <th class="py-3 px-3">المقبوض / الإجمالي</th>
+                <th class="py-3 px-3">الحالة</th>
+                <th class="py-3 px-3">إجراءات سريعة</th>
+              </tr>
+            </thead>
+            <tbody id="records-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== القسم 3: نظام المخزون الطبي التفصيلي والبارز ==================== -->
+    <section id="tab-section-inventory" class="hidden space-y-5 no-print">
+
+      <!-- شريط إحصائيات المخزون -->
+      <div id="inventory-stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+
+      <!-- نموذج إضافة أو تعديل مادة بالكمية والوحدة والسعر التفصيلي -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <h2 class="text-base font-black text-sky-400">📦 إضافة أو تحديث صنف في المخزون الطبي</h2>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.runInventoryAuditAI()"
+              class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow">
+              🤖 فحص وتدقيق المخزون بالذكاء الاصطناعي
+            </button>
+            <button type="button" onclick="window.exportDataToCSV('inventory')"
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold">
+              📊 تصدير المخزون Excel
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">اسم المادة أو الصنف الطبي</label>
+            <input id="inv-name" type="text" placeholder="مثال: أمبولات بنج / حشوات 3M"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">الكمية الحالية</label>
+            <input id="inv-qty" type="number" step="0.01" placeholder="0" oninput="window.calcInventoryFormTotal()"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-extrabold text-sky-300" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-amber-300 mb-1">وحدة القياس (عدد/وزن/حجم)</label>
+            <select id="inv-unit"
+              class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-bold text-white"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-rose-300 mb-1">حد التنبيه للنقص</label>
+            <input id="inv-min-qty" type="number" step="0.01" value="5"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">سعر الوحدة الواحدة</label>
+            <input id="inv-unit-price" type="number" step="0.01" placeholder="0" oninput="window.calcInventoryFormTotal()"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-emerald-300" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-emerald-400 mb-1">التكلفة الإجمالية (تلقائي)</label>
+            <input id="inv-total-cost" type="number" step="0.01" placeholder="0"
+              class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs font-black text-emerald-300" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">الخدمة المرتبطة (للخصم التلقائي)</label>
+            <select id="inv-linked-service"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">ملاحظات الصنف</label>
+            <input id="inv-notes" type="text" placeholder="تاريخ انتهاء أو مورد..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer">
+            <input id="inv-record-expense" type="checkbox" class="w-4 h-4 rounded accent-sky-500" />
+            <span>تسجيل التكلفة الإجمالية للشراء كمصروف في الحسابات المالية تلقائياً</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.resetInventoryFormUI()"
+              class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">
+              إلغاء / تفريغ
+            </button>
+            <button type="button" onclick="window.saveInventoryFromUI()"
+              class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black shadow-lg">
+              <span id="inv-save-btn-text">➕ حفظ وإضافة المادة للمخزون</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- جدول المخزون ذو الأزرار البارزة -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-x-auto">
+        <table class="w-full text-right border-collapse">
+          <thead>
+            <tr class="bg-slate-950 text-slate-300 text-xs border-b border-slate-800">
+              <th class="py-3 px-3">اسم المادة والوصف</th>
+              <th class="py-3 px-3">الكمية والوحدة</th>
+              <th class="py-3 px-3">حد التنبيه</th>
+              <th class="py-3 px-3">سعر الوحدة</th>
+              <th class="py-3 px-3">القيمة الإجمالية</th>
+              <th class="py-3 px-3">الحالة</th>
+              <th class="py-3 px-3">إجراءات التحكم البارزة (استهلاك / تزويد / تعديل / حذف)</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== القسم 4: التقارير المالية والمصروفات ==================== -->
+    <section id="tab-section-finance" class="hidden space-y-5 no-print">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-base font-black text-sky-400">📊 لوحة المؤشرات المالية وصافي الأرباح</h2>
+        <button type="button" onclick="window.generateComprehensiveFinancialReport()"
+          class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold shadow-lg">
+          🤖 توليد تقرير مالي وإداري شامل بالذكاء الاصطناعي
+        </button>
+      </div>
+
+      <div id="finance-kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+      <!-- تسجيل المصروفات -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+        <h3 class="text-sm font-black text-amber-400">💸 تسجيل مصروف أو نفقات عيادة جديدة</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <input id="exp-title" type="text" placeholder="بيان المصروف (مثال: إيجار، كهرباء، معمل...)"
+            class="sm:col-span-2 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white" />
+          <input id="exp-amount" type="number" placeholder="المبلغ"
+            class="bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-amber-300" />
+          <div class="flex items-center gap-2">
+            <select id="exp-category"
+              class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-white">
+              <option value="تشغيلية">نفقات تشغيلية</option>
+              <option value="مشتريات مخزون">مشتريات مخزون</option>
+              <option value="معمل وتركيبات">معمل وتركيبات</option>
+              <option value="رواتب وأجور">رواتب وأجور</option>
+              <option value="عام">مصروف عام</option>
+            </select>
+            <button type="button" onclick="window.addExpenseFromUI()"
+              class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shrink-0">
+              ➕ إضافة
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto pt-2">
+          <table class="w-full text-right border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-slate-300 text-xs border-b border-slate-800">
+                <th class="py-2.5 px-3">التاريخ</th>
+                <th class="py-2.5 px-3">بيان المصروف</th>
+                <th class="py-2.5 px-3">التصنيف</th>
+                <th class="py-2.5 px-3">المبلغ</th>
+                <th class="py-2.5 px-3">حذف</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== القسم 5: شاشة المحادثة الذكية المنسقة + رفع الملفات والصور ==================== -->
+    <section id="tab-section-ai-chat" class="hidden no-print">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col h-[76vh]">
+
+        <!-- رأس شاشة المحادثة -->
+        <div class="p-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 rounded-t-2xl">
+          <div>
+            <h2 class="text-sm font-black text-sky-400">🤖 المساعد الطبي والإداري الذكي (Smart Context RAG)</h2>
+            <p class="text-[11px] text-slate-400">متصل ببيانات السندات والديون والمخزون والمصروفات مع دعم الصور والملفات</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="window.testAndDiscoverAllModels()"
+              class="px-3 py-1.5 rounded-xl bg-sky-600/30 hover:bg-sky-600 border border-sky-400/40 text-xs font-extrabold text-white">
+              🔍 فحص النماذج المتاحة
+            </button>
+            <button type="button" onclick="window.toggleLiveVoiceCall()"
+              class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold text-white">
+              📞 مكالمة حية
+            </button>
+            <button type="button" onclick="window.clearChatHistoryUI()"
+              class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">
+              🧹 مسح المحادثة
+            </button>
+          </div>
+        </div>
+
+        <!-- صندوق الرسائل المنسق غير المتداخل -->
+        <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+        <!-- معاينة المرفقات قبل الإرسال -->
+        <div id="chat-attachment-preview" class="hidden px-4 py-2 bg-slate-950/90 border-t border-slate-800"></div>
+
+        <!-- شريط الإدخال وإرفاق الصور/الملفات والمايكروفون -->
+        <div class="p-3 bg-slate-950 border-t border-slate-800 rounded-b-2xl flex items-center gap-2">
+          <label class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 cursor-pointer shrink-0" title="إرفاق صورة أشعة أو فاتورة أو ملف PDF/JSON/CSV">
+            📎
+            <input id="chat-file-input" type="file" accept="image/*,.pdf,.json,.csv,.txt"
+              onchange="window.handleChatFileUpload(event)" class="hidden" />
+          </label>
+          <button type="button" onclick="window.toggleChatVoiceInput()"
+            class="voice-record-btn p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white shrink-0" title="تحدث صوتياً">
+            🎙️
+          </button>
+          <input id="chat-user-input" type="text"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();window.sendChatMessageUI();}"
+            placeholder="اسأل عن مريض، ديون، مخزون، أو أرفق صورة أشعة / ملف للتحليل..."
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-sky-400 focus:outline-none" />
+          <button type="button" onclick="window.sendChatMessageUI()"
+            class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black shrink-0 shadow">
+            إرسال 🚀
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== القسم 6: الهوية الكاملة والإعدادات والخدمات ==================== -->
+    <section id="tab-section-settings" class="hidden space-y-6 no-print">
+
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div>
+          <h2 class="text-base font-black text-sky-400">⚙️ إعدادات الهوية الكاملة، الذكاء الاصطناعي، والخدمات</h2>
+          <p class="text-xs text-slate-400">عدّل أي تفصيل في هوية العيادة أو الشعار أو النماذج ثم اضغط حفظ</p>
+        </div>
+        <button type="button" onclick="window.saveAllSettingsFromUI()"
+          class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black shadow-xl">
+          💾 حفظ وتطبيق جميع الإعدادات
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- 1. هوية الموقع والعيادة -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <h3 class="text-sm font-black text-amber-400 border-b border-slate-800 pb-2">🏥 1. هوية النظام والعيادة (عربي / إنجليزي)</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">اسم النظام في الهيدر</label>
+              <input id="cfg-sys-title" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">الشارة التعريفية</label>
+              <input id="cfg-sys-badge" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">اسم الطبيب (عربي)</label>
+              <input id="cfg-doc-ar" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">التخصص (عربي)</label>
+              <input id="cfg-spec-ar" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">اسم العيادة (إنجليزي)</label>
+              <input id="cfg-clinic-en" type="text" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">اسم الطبيب (إنجليزي)</label>
+              <input id="cfg-doc-en" type="text" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">العنوان</label>
+              <input id="cfg-address" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">العملة الافتراضية</label>
+              <input id="cfg-currency" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-slate-300 font-bold mb-1">أرقام الهواتف</label>
+              <input id="cfg-phones" type="text" dir="ltr" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. المظهر والشعار والعلامة المائية -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <h3 class="text-sm font-black text-sky-400 border-b border-slate-800 pb-2">🎨 2. الشعار، العلامة المائية، والألوان</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">الثيم اللوني</label>
+              <select id="cfg-theme-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
+                <option value="navy">كحلي طبي احترافي (Navy)</option>
+                <option value="emerald">زمردي جراحي (Emerald)</option>
+                <option value="royal">ملكي بنفسجي (Royal)</option>
+                <option value="slate">داكن رمادي (Slate)</option>
+                <option value="custom">ألوان مخصصة</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">شفافية العلامة المائية (%)</label>
+              <input id="cfg-watermark-opacity" type="number" min="0" max="40" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">اللون الأساسي</label>
+              <input id="cfg-color-primary" type="color" class="w-full h-9 rounded-lg bg-slate-950 border border-slate-700" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">اللون الثانوي</label>
+              <input id="cfg-color-secondary" type="color" class="w-full h-9 rounded-lg bg-slate-950 border border-slate-700" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">لون التمييز</label>
+              <input id="cfg-color-accent" type="color" class="w-full h-9 rounded-lg bg-slate-950 border border-slate-700" />
+            </div>
+          </div>
+
+          <div class="space-y-2 text-xs pt-1">
+            <label class="block text-slate-300 font-bold">رابط الشعار أو رفع صورة شعار من جهازك</label>
+            <input id="cfg-logo-url" type="text" dir="ltr" placeholder="https://..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            <label class="inline-block px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold cursor-pointer">
+              🖼️ اختر صورة شعار من الهاتف / الكمبيوتر
+              <input type="file" accept="image/*" onchange="window.handleLogoUpload(event)" class="hidden" />
+            </label>
+          </div>
+
+          <!-- تفعيل المميزات -->
+          <div class="grid grid-cols-2 gap-2 pt-2 text-xs text-slate-200">
+            <label class="flex items-center gap-2"><input id="cfg-feat-aibar" type="checkbox" class="accent-sky-500" /> شريط الإدخال الذكي</label>
+            <label class="flex items-center gap-2"><input id="cfg-feat-autoprice" type="checkbox" class="accent-sky-500" /> التسعير التلقائي للخدمات</label>
+            <label class="flex items-center gap-2"><input id="cfg-feat-qrcode" type="checkbox" class="accent-sky-500" /> إظهار رمز QR في السند</label>
+            <label class="flex items-center gap-2"><input id="cfg-feat-debtalert" type="checkbox" class="accent-sky-500" /> تنبيه الديون السابقة</label>
+            <label class="flex items-center gap-2 col-span-2"><input id="cfg-feat-autoinv" type="checkbox" class="accent-sky-500" /> خصم مواد المخزون تلقائياً عند حفظ السند</label>
+          </div>
+        </div>
+
+        <!-- 3. مفاتيح النماذج + الصوت المزدوج -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-sm font-black text-emerald-400">🤖 3. مفاتيح الذكاء الاصطناعي والصوت المزدوج</h3>
+            <button type="button" onclick="window.testAndDiscoverAllModels()"
+              class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold">
+              ⚡ فحص وتفعيل النماذج الحية
+            </button>
+          </div>
+
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">مفتاح Google Gemini API Key</label>
+              <input id="cfg-gemini-key" type="password" dir="ltr" placeholder="AIzaSy..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">مفتاح Groq Cloud API Key (لـ Whisper والسرعة الفائقة)</label>
+              <input id="cfg-groq-key" type="password" dir="ltr" placeholder="gsk_..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">مفتاح OpenRouter API Key</label>
+              <input id="cfg-openrouter-key" type="password" dir="ltr" placeholder="sk-or-..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-amber-300 font-bold mb-1">محرك الإدخال الصوتي (STT)</label>
+                <select id="cfg-stt-engine" onchange="window.setVoiceEngineMode('stt', this.value)"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
+                  <option value="ai_cloud">☁️ صوت النماذج السحابية (Groq Whisper / Gemini)</option>
+                  <option value="phone_native">📱 صوت الهاتف المحلي (Phone Native STT)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-emerald-300 font-bold mb-1">محرك النطق الصوتي (TTS)</label>
+                <select id="cfg-tts-engine" onchange="window.setVoiceEngineMode('tts', this.value)"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
+                  <option value="ai_cloud">☁️ صوت النماذج السحابية (Gemini Native Audio)</option>
+                  <option value="phone_native">📱 قارئ الهاتف المحلي (Phone SpeechSynthesis)</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="flex items-center gap-2 pt-1 text-slate-200 font-bold">
+              <input id="cfg-auto-speak" type="checkbox" class="accent-emerald-500" />
+              <span>نطق ردود الذكاء الاصطناعي صوتياً بشكل تلقائي</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. المزامنة السحابية JSONBin والنسخ المحلي -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+          <h3 class="text-sm font-black text-sky-400 border-b border-slate-800 pb-2">☁️ 4. المزامنة السحابية (JSONBin) والنسخ الاحتياطي</h3>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">JSONBin X-Master-Key</label>
+              <input id="cfg-cloud-key" type="password" dir="ltr" placeholder="$2a$10$..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">معرف الحاوية السحابية (Bin ID)</label>
+              <input id="cfg-cloud-bin" type="text" dir="ltr" placeholder="يُنشأ تلقائياً عند أول رفع..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onclick="window.syncDataToCloud()"
+                class="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black">
+                ☁️⬆️ رفع البيانات للسحابة
+              </button>
+              <button type="button" onclick="window.syncDataFromCloud()"
+                class="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black">
+                ☁️⬇️ استعادة من السحابة
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 5. قائمة الخدمات العلاجية وأسعارها -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <h3 class="text-sm font-black text-amber-400">🦷 5. قائمة الخدمات العلاجية وأسعارها الافتراضية</h3>
+          <button type="button" onclick="window.addNewServiceRow()"
+            class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold">
+            ➕ إضافة خدمة جديدة
+          </button>
+        </div>
+        <div id="settings-services-list" class="space-y-2"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== نافذة التوقيع الإلكتروني الحر ==================== -->
+  <div id="signature-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-sky-500/40 rounded-2xl max-w-md w-full p-4 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 id="signature-modal-title" class="text-sm font-black text-sky-400">✍️ التوقيع الإلكتروني</h3>
+        <button type="button" onclick="window.closeSignatureModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+
+      <div class="bg-white rounded-xl p-1 border-2 border-slate-700">
+        <canvas id="signature-pad-canvas" width="420" height="180" class="w-full h-44 touch-none cursor-crosshair"></canvas>
+      </div>
+
+      <div id="sig-permanent-option-wrap" class="flex items-center gap-2 text-xs text-slate-300">
+        <input id="sig-save-permanent-checkbox" type="checkbox" checked class="accent-sky-500" />
+        <label for="sig-save-permanent-checkbox">حفظ كتوقيع دائم للطبيب/المحاسب في جميع السندات القادمة</label>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" onclick="window.clearSignatureCanvas()"
+          class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">
+          🧹 مسح
+        </button>
+        <button type="button" onclick="window.saveSignatureCanvas()"
+          class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white">
+          ✅ اعتماد التوقيع
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== نافذة المكالمة الصوتية الحية (Live Voice Call Modal) ==================== -->
+  <div id="live-voice-call-modal" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 text-center space-y-5 shadow-2xl">
+      <div id="live-call-engine-badge" class="inline-block px-3 py-1 rounded-full bg-slate-800 text-sky-300 text-[11px] font-bold">
+        STT: سحابي AI | TTS: سحابي AI
+      </div>
+
+      <div id="live-call-orb" class="w-28 h-28 rounded-full flex items-center justify-center mx-auto bg-emerald-500/20 border-4 border-emerald-400 animate-pulse">
+        <span class="text-4xl">🎙️</span>
+      </div>
+
+      <div id="live-call-status-text" class="text-sm font-extrabold text-white">
+        تحدث الآن يا دكتور... أنا أستمع إليك مباشرة
+      </div>
+
+      <div id="live-call-transcript" class="min-h-[70px] max-h-40 overflow-y-auto bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 leading-relaxed">
+        ...
+      </div>
+
+      <button type="button" onclick="window.stopLiveVoiceCall()"
+        class="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm shadow-lg">
+        🛑 إنهاء المكالمة الصوتية الحية
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== استدعاء الوحدات البرمجية الخمس بالترتيب ==================== -->
+  <script src="js/core-db.js"></script>
+  <script src="js/ai-router.js"></script>
+  <script src="js/voice-vision.js"></script>
+  <script src="js/receipt-pdf.js"></script>
+  <script src="js/ui-controller.js"></script>
+</body>
+</html>
