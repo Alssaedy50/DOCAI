@@ -965,7 +965,7 @@ window.updateModelSelectDropdown = function() {
   selects.forEach(sel => {
     const current = window.AppState.settings.ai.selectedMode || 'auto';
     sel.innerHTML = `<option value="auto">⚡ توجيه ذكي تلقائي</option>` +
-      availableModels.map(m => `<option value="${escapeHtml(m.id)}">🟢 ${escapeHtml(m.name)} (${escapeHtml(m.provider)})</option>`).join('');
+      availableModels.map(m => `<option value="${escapeHtml(m.id)}">🟢 ${escapeHtml(m.name)} (${escapeHtml(m.provider)} · ${m.free === true ? 'Free listing' : 'API quota'})</option>`).join('');
     sel.value = availableModels.some(m => m.id === current) ? current : 'auto';
     if (sel.value !== current && current !== 'auto') {
       window.AppState.settings.ai.selectedMode = 'auto';
