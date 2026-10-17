@@ -29,6 +29,11 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     throw new Error('مكتبة التصوير html2canvas غير محملة بعد، يرجى التحقق من الاتصال بالإنترنت');
   }
 
+  // Refresh QR before cloning; DOM cloning does not preserve canvas bitmap pixels.
+  if (typeof window.updateReceiptQRCode === 'function') {
+    try { await window.updateReceiptQRCode(); } catch (e) { console.warn('QR refresh before export failed', e); }
+  }
+
   // انتظار جاهزية كافة الخطوط العربية (Cairo / Tajawal) قبل الرسم
   if (document.fonts && document.fonts.ready) {
     try { await document.fonts.ready; } catch (e) {}
@@ -46,6 +51,19 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
   offscreenWrapper.setAttribute('dir', 'rtl');
 
   const clone = sourceEl.cloneNode(true);
+  // Canvas bitmap data is not copied by cloneNode; copy QR/signature pixels explicitly.
+  const sourceCanvases = sourceEl.querySelectorAll('canvas');
+  const clonedCanvases = clone.querySelectorAll('canvas');
+  sourceCanvases.forEach((sourceCanvas, index) => {
+    const targetCanvas = clonedCanvases[index];
+    if (!targetCanvas) return;
+    try {
+      targetCanvas.width = sourceCanvas.width;
+      targetCanvas.height = sourceCanvas.height;
+      const context = targetCanvas.getContext('2d');
+      if (context) context.drawImage(sourceCanvas, 0, 0);
+    } catch (error) { console.warn('Could not copy canvas into receipt export', error); }
+  });
   clone.style.width = '680px';
   clone.style.maxWidth = '680px';
   clone.style.margin = '0';
@@ -62,10 +80,22 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     el.classList.remove('truncate', 'tracking-widest', 'tracking-wider', 'tracking-tight', 'tracking-tighter');
     el.style.letterSpacing = '0px';
     el.style.fontVariantLigatures = 'normal';
-    if (el.classList.contains('no-export') || el.classList.contains('no-print')) {
-      el.style.display = 'none';
+    if (el.classList.contains('no-export') || el.classList.contains('no-print')) el.style.display = 'none';
+    if (el.id === 'preview-watermark-img') el.style.opacity = '0.025';
+    if (el.classList.contains('clinic-logo-img')) {
+      el.style.width = '68px'; el.style.height = '68px'; el.style.objectFit = 'contain';
+      el.style.opacity = '1'; el.style.filter = 'none';
     }
   });
+
+  await Promise.all(Array.from(clone.querySelectorAll('img')).map(img => {
+    if (img.complete) return Promise.resolve();
+    return new Promise(resolve => {
+      img.addEventListener('load', resolve, { once:true });
+      img.addEventListener('error', resolve, { once:true });
+      setTimeout(resolve, 1500);
+    });
+  }));
 
   offscreenWrapper.appendChild(clone);
   document.body.appendChild(offscreenWrapper);
@@ -100,7 +130,7 @@ window.exportReceiptAsImageMobile = async function(shareDirectly = false) {
     // تحديث المعاينة أولاً لضمان تطابق البيانات
     if (window.updateLiveReceiptPreview) window.updateLiveReceiptPreview();
 
-    const canvas = await window.captureCleanReceiptCanvas(2.5);
+    const canvas = await window.captureCleanReceiptCanvas(3);
     const recNo = document.getElementById('rec-no')?.value || '1001';
     const patientName = (document.getElementById('rec-patient-name')?.value || 'مريض').trim().replace(/\s+/g, '_');
     const fileName = `سند_قبض_${recNo}_${patientName}.png`;
@@ -154,8 +184,8 @@ window.exportReceiptAsPDF = async function(format = null) {
       throw new Error('مكتبة jsPDF غير محملة، يرجى التحقق من اتصال الإنترنت');
     }
 
-    const canvas = await window.captureCleanReceiptCanvas(2.5);
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const canvas = await window.captureCleanReceiptCanvas(3);
+    const imgData = canvas.toDataURL('image/png');
     const imgWidthPx = canvas.width;
     const imgHeightPx = canvas.height;
     const aspectRatio = imgHeightPx / imgWidthPx;
