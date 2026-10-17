@@ -114,13 +114,39 @@ window.testAndDiscoverAllModels = async function() {
   return verified;
 };
 
+async function callServerAI(payload) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || ('خدمة الذكاء الاصطناعي HTTP ' + response.status));
+    if (!data.text) throw new Error('وصل رد فارغ من خدمة الذكاء الاصطناعي');
+    return data.text;
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('تأخر الرد أكثر من 25 ثانية؛ تحقق من الشبكة وصلاحية مفاتيح Vercel');
+    if (error instanceof TypeError) throw new Error('تعذر الوصول إلى /api/ai. افتح نسخة الموقع المنشورة على Vercel وليس ملفاً محلياً');
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   const settings = window.AppState.settings.ai;
   const requested = options.modelId || settings.selectedMode || 'auto';
   const context = window.ClinicDB ? window.ClinicDB.getSmartContextForQuery(prompt) : {};
   const systemPrompt = `أنت مساعد الذكاء الاصطناعي الطبي والإداري لنظام عيادة د. صلاح الدين السعيدي (DOCAI-GEMINI ERP).\nسياق العيادة: ${JSON.stringify(context)}\nأجب بالعربية بدقة واحتراف، ولا تخترع بيانات غير موجودة.`;
   const models = window.AI_MODELS_CATALOG || [];
+  const hasLocalProviderKey = Boolean(settings.geminiKey || settings.groqKey || settings.openrouterKey);
+  // Vercel environment variables are server-side only; call the protected route if no key is stored in this browser.
+  if (!hasLocalProviderKey) return callServerAI({ systemPrompt, userPrompt: prompt, imageBase64, modelId: requested });
   let candidates = requested === 'auto' ? models.filter(m => m.status === 'working') : models.filter(m => m.id === requested);
+  // First message should not wait for a full model-discovery scan.
+  if (requested === 'auto' && candidates.length === 0) {
+    candidates = [];
+    if (settings.geminiKey) candidates.push({ id: 'gemini-2.5-flash', provider: 'gemini' });
+    if (settings.groqKey) candidates.push({ id: 'llama-3.3-70b-versatile', provider: 'groq' });
+    if (settings.openrouterKey) candidates.push({ id: 'openrouter/auto', provider: 'openrouter' });
+  }
   if (requested !== 'auto' && candidates.length === 0) {
     const provider = requested.startsWith('gemini') ? 'gemini' : (requested.includes('/') || requested.endsWith(':free') ? 'openrouter' : 'groq');
     candidates = [{ id: requested, provider }];
