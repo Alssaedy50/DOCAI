@@ -134,7 +134,7 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   const settings = window.AppState.settings.ai;
   const requested = options.modelId || settings.selectedMode || 'auto';
   const context = window.ClinicDB ? window.ClinicDB.getSmartContextForQuery(prompt) : {};
-  const systemPrompt = `أنت مساعد الذكاء الاصطناعي الطبي والإداري لنظام عيادة د. صلاح الدين السعيدي (DOCAI-GEMINI ERP).\nسياق العيادة: ${JSON.stringify(context)}\nأجب بالعربية بدقة واحتراف، ولا تخترع بيانات غير موجودة.`;
+  const systemPrompt = `أنت مساعد الذكاء الاصطناعي الطبي والإداري لنظام عيادة د. صلاح الدين السعيدي (DOCAI-GEMINI ERP).\nسياق العيادة: ${JSON.stringify(context)}\nأجب بالعربية بدقة واحتراف، ولا تخترع بيانات غير موجودة. لا تعرض تفكيرك الداخلي أو خطوات التحليل أو مسودات الإجابة؛ اعرض الرد النهائي فقط. إذا كانت الرسالة تحية بسيطة مثل مرحباً، فأجب بتحية قصيرة من جملة واحدة واسأل كيف تساعد المستخدم. اجعل الإجابة موجزة للسؤال البسيط، ومفصلة فقط عندما يطلب المستخدم ذلك.`;
   const models = window.AI_MODELS_CATALOG || [];
   const hasLocalProviderKey = Boolean(settings.geminiKey || settings.groqKey || settings.openrouterKey);
   // Vercel environment variables are server-side only; call the protected route if no key is stored in this browser.
