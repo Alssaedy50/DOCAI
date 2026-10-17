@@ -473,7 +473,7 @@ window.ClinicDB = {
 
     if (asksDebts) {
       contextPacket.pendingDebtsList = receipts
-        .filter(r => (Number(r.remainingAmount) || 0) > 0 && (!matchedPatientReceipts.length || matchedPatientReceipts.some(m => m.id === r.id)))
+        .filter(r => (Number(r.remainingAmount) || 0) > 0 && (!matchedPatientReceipts.length || matchedPatientReceipts.includes(r)))
         .map(r => ({
           receiptNo: r.receiptNo,
           date: r.date,
