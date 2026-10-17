@@ -17,6 +17,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 18000) {
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   finally { clearTimeout(timer); }
 }
+
+// Read credentials directly from settings before discovery/chat, so unsaved form values
+// are not silently ignored. Credentials are kept local and are never logged.
+function syncAISettingsFromUI() {
+  const settings = window.AppState?.settings?.ai;
+  if (!settings) return {};
+  let changed = false;
+  for (const [key, id] of [['geminiKey','cfg-gemini-key'],['groqKey','cfg-groq-key'],['openrouterKey','cfg-openrouter-key']]) {
+    const input = document.getElementById(id);
+    if (input && settings[key] !== input.value.trim()) { settings[key] = input.value.trim(); changed = true; }
+  }
+  if (changed && typeof window.saveSettingsState === 'function') window.saveSettingsState();
+  return settings;
+}
 async function testOneModel(model, settings) {
   try {
     let res, data;
@@ -53,7 +67,7 @@ window.testAndDiscoverAllModels = async function() {
   }
   window.__docaiModelDiscoveryRunning = true;
   try {
-  const settings = window.AppState?.settings?.ai || {};
+  const settings = syncAISettingsFromUI();
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
   if (window.showToast) window.showToast('جارٍ اكتشاف النماذج من المزودين ثم اختبار كل نموذج على حدة…', 'info');
@@ -124,7 +138,7 @@ window.testAndDiscoverAllModels = async function() {
 };
 
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
-  const settings = window.AppState?.settings?.ai || {};
+  const settings = syncAISettingsFromUI();
   const userText = String(prompt || '').trim();
   if (!userText) throw new Error('يرجى كتابة الرسالة أولاً.');
   // التحيات والأسئلة العامة لا تحتاج إلى قراءة بيانات المرضى أو السجلات المالية.
@@ -146,8 +160,19 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   }
   if (requested === 'auto') {
     candidates.sort((a,b) => ({gemini:0,groq:1,openrouter:2}[a.provider] ?? 9) - ({gemini:0,groq:1,openrouter:2}[b.provider] ?? 9));
-    // لا تنتظر عشرات النماذج المتعطلة بالتتابع؛ جرّب أفضل ثلاثة مرشحين فقط.
-    candidates = candidates.slice(0, 3);
+    // Keep one model per provider and add direct defaults when discovery is empty/stale.
+    const defaults = [];
+    if (settings.geminiKey) defaults.push({ id:'gemini-2.5-flash', provider:'gemini' });
+    if (settings.groqKey) defaults.push({ id:'llama-3.3-70b-versatile', provider:'groq' });
+    if (settings.openrouterKey) defaults.push({ id:'meta-llama/llama-3.3-70b-instruct:free', provider:'openrouter' });
+    const pool = new Map();
+    for (const model of [...candidates, ...defaults]) {
+      const key = `${model.provider}:${model.id}`;
+      if (!pool.has(key)) pool.set(key, model);
+    }
+    candidates = ['gemini','groq','openrouter']
+      .map(provider => [...pool.values()].find(model => model.provider === provider))
+      .filter(Boolean).slice(0,3);
   }
   let lastError;
   const timeoutMs = Math.max(5000, Math.min(Number(options.timeoutMs) || 10000, 20000));
