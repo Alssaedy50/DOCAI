@@ -115,44 +115,59 @@ window.testAndDiscoverAllModels = async function() {
 };
 
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
-  const settings = window.AppState.settings.ai;
-  const requested = options.modelId || settings.selectedMode || 'auto';
-  const context = window.ClinicDB ? window.ClinicDB.getSmartContextForQuery(prompt) : {};
-  const systemPrompt = `أنت مساعد الذكاء الاصطناعي الطبي والإداري لنظام عيادة د. صلاح الدين السعيدي (DOCAI-GEMINI ERP).\nسياق العيادة: ${JSON.stringify(context)}\nأجب بالعربية بدقة واحتراف، ولا تخترع بيانات غير موجودة.`;
+  const settings = window.AppState?.settings?.ai || {};
+  const userText = String(prompt || '').trim();
+  if (!userText) throw new Error('يرجى كتابة الرسالة أولاً.');
+  // التحيات والأسئلة العامة لا تحتاج إلى قراءة بيانات المرضى أو السجلات المالية.
+  const contextIntent = /مريض|مرضى|اسم المريض|رقم الهاتف|هاتف|جوال|سند|سندات|إيراد|ايراد|دخل|قبض|ديون|دين|متبقي|ذمم|مخزون|مواد|مادة|كمية|مصروف|مصاريف|نفقات|تكلفة|تكاليف|ربح|أرباح|خسارة|مالي|تقرير|حساب|رصيد|خدمات|أسعار|اسعار|موعد|مواعيد|today|patient|receipt|inventory|expense|debt|revenue|profit|financial|clinic records/i.test(userText);
+  const context = contextIntent && window.ClinicDB ? window.ClinicDB.getSmartContextForQuery(userText) : {};
+  const systemPrompt = [
+    'أنت مساعد الذكاء الاصطناعي الطبي والإداري لنظام عيادة د. صلاح الدين السعيدي (DOCAI-GEMINI ERP).',
+    'أجب بلغة المستخدم، وبالعربية الواضحة عند استخدام العربية. كن مباشرًا ومختصرًا في التحيات والأسئلة البسيطة.',
+    'لا تخترع بيانات للعيادة أو للمرضى. عند السؤال عن سجل غير موجود في السياق، وضّح أن البيانات المتاحة لا تكفي.',
+    contextIntent ? 'استخدم سياق العيادة المرفق فقط عند الإجابة عن بيانات العيادة.' : '',
+    contextIntent ? 'سياق العيادة: ' + JSON.stringify(context) : ''
+  ].filter(Boolean).join('\n');
   const models = window.AI_MODELS_CATALOG || [];
+  const requested = options.modelId || settings.selectedMode || 'auto';
   let candidates = requested === 'auto' ? models.filter(m => m.status === 'working') : models.filter(m => m.id === requested);
   if (requested !== 'auto' && candidates.length === 0) {
     const provider = requested.startsWith('gemini') ? 'gemini' : (requested.includes('/') || requested.endsWith(':free') ? 'openrouter' : 'groq');
     candidates = [{ id: requested, provider }];
   }
-  if (requested === 'auto') candidates.sort((a,b) => ({gemini:0,groq:1,openrouter:2}[a.provider] ?? 9) - ({gemini:0,groq:1,openrouter:2}[b.provider] ?? 9));
+  if (requested === 'auto') {
+    candidates.sort((a,b) => ({gemini:0,groq:1,openrouter:2}[a.provider] ?? 9) - ({gemini:0,groq:1,openrouter:2}[b.provider] ?? 9));
+    // لا تنتظر عشرات النماذج المتعطلة بالتتابع؛ جرّب أفضل ثلاثة مرشحين فقط.
+    candidates = candidates.slice(0, 3);
+  }
   let lastError;
+  const timeoutMs = Math.max(5000, Math.min(Number(options.timeoutMs) || 10000, 20000));
   for (const model of candidates) {
     try {
-      if (model.provider === 'gemini' && settings.geminiKey) return await callGeminiAPI(settings.geminiKey, model.id, systemPrompt, prompt, imageBase64);
-      if (model.provider === 'groq' && settings.groqKey) return await callGroqAPI(settings.groqKey, model.id, systemPrompt, prompt, imageBase64);
-      if (model.provider === 'openrouter' && settings.openrouterKey) return await callOpenRouterAPI(settings.openrouterKey, model.id, systemPrompt, prompt, imageBase64);
+      if (model.provider === 'gemini' && settings.geminiKey) return await callGeminiAPI(settings.geminiKey, model.id, systemPrompt, userText, imageBase64, timeoutMs);
+      if (model.provider === 'groq' && settings.groqKey) return await callGroqAPI(settings.groqKey, model.id, systemPrompt, userText, imageBase64, timeoutMs);
+      if (model.provider === 'openrouter' && settings.openrouterKey) return await callOpenRouterAPI(settings.openrouterKey, model.id, systemPrompt, userText, imageBase64, timeoutMs);
     } catch (e) { lastError = e; console.warn(`AI model ${model.id} failed; trying fallback`, e); }
   }
   if (lastError) throw new Error(`تعذر تشغيل النموذج المختار والنماذج البديلة: ${lastError.message}`);
-  throw new Error('لا توجد نماذج ذكاء اصطناعي مهيأة. أضف مفتاحًا صالحًا لأحد المزودين من الإعدادات ثم اضغط «فحص النماذج المتاحة».');
+  throw new Error('لا توجد نماذج ذكاء اصطناعي مهيأة أو مجتازة للاختبار. أضف مفتاحًا صالحًا لأحد المزودين من الإعدادات ثم اضغط «فحص النماذج المتاحة».');
 };
 
-async function callGeminiAPI(apiKey, model, systemPrompt, userPrompt, imageBase64) {
+async function callGeminiAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const parts = [{ text: `${systemPrompt}\n\nطلب المستخدم: ${userPrompt}` }];
   if (imageBase64) { const b64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64; parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } }); }
-  const res = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{parts}], generationConfig:{temperature:0.3} }) });
+  const res = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{parts}], generationConfig:{temperature:0.3} }) }, timeoutMs);
   const data = await res.json().catch(()=>({})); if (!res.ok) throw new Error(data?.error?.message || `Gemini HTTP ${res.status}`);
   const text = aiResponseText(data, 'gemini'); if (!text) throw new Error('أعاد Gemini استجابة فارغة'); return text;
 }
-async function callGroqAPI(apiKey, model, systemPrompt, userPrompt, imageBase64) {
+async function callGroqAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
-  const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`}, body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3}) });
+  const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`}, body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3}) }, timeoutMs);
   const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`Groq HTTP ${res.status}`); const text=aiResponseText(data,'groq'); if(!text) throw new Error('أعاد Groq استجابة فارغة'); return text;
 }
-async function callOpenRouterAPI(apiKey, model, systemPrompt, userPrompt, imageBase64) {
+async function callOpenRouterAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
-  const res=await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`,'HTTP-Referer':location.origin,'X-Title':'DOCAI-GEMINI ERP'},body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3})});
+  const res=await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`,'HTTP-Referer':location.origin,'X-Title':'DOCAI-GEMINI ERP'},body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3})},timeoutMs);
   const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`OpenRouter HTTP ${res.status}`); const text=aiResponseText(data,'openrouter'); if(!text) throw new Error('أعاد OpenRouter استجابة فارغة'); return text;
 }
 

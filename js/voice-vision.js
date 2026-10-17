@@ -239,6 +239,13 @@ function stopMediaStreamTracks() {
 /**
  * تحويل ملف الصوت المسجل إلى نص عبر Groq Whisper Large V3 أو Gemini Native Audio
  */
+async function voiceFetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+
 async function transcribeAudioWithCloudAI(audioBlob) {
   const aiCfg = window.AppState?.settings?.ai || {};
 
@@ -252,11 +259,11 @@ async function transcribeAudioWithCloudAI(audioBlob) {
       formData.append('language', 'ar');
       formData.append('prompt', 'نظام عيادة طب وجراحة الفم والأسنان، دكتور صلاح الدين السعيدي، سند قبض، كشف، حشوة، عصب، خلع، تقويم، تركيبات، ريال يمني.');
 
-      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      const res = await voiceFetchWithTimeout('https://api.groq.com/openai/v1/audio/transcriptions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${aiCfg.groqKey}` },
         body: formData
-      });
+      }, 12000);
       const data = await res.json();
       if (res.ok && data.text) {
         return data.text.trim();
@@ -272,7 +279,7 @@ async function transcribeAudioWithCloudAI(audioBlob) {
     const cleanBase64 = base64Audio.includes(',') ? base64Audio.split(',')[1] : base64Audio;
     const mimeType = audioBlob.type ? audioBlob.type.split(';')[0] : 'audio/webm';
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiCfg.geminiKey}`, {
+    const res = await voiceFetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiCfg.geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -283,7 +290,7 @@ async function transcribeAudioWithCloudAI(audioBlob) {
           ]
         }]
       })
-    });
+    }, 15000);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'فشل تفريغ الصوت عبر Gemini');
     const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -510,7 +517,12 @@ function runLiveCallListeningCycle() {
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) {
-    setLiveCallStatusUI('idle', 'متصفحك يتطلب استخدام زر التسجيل السحابي لعدم دعم الاستماع المستمر المحلي');
+    if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
+      setLiveCallStatusUI('listening', '☁️ التعرف الصوتي المحلي غير متاح؛ سيتم استخدام التفريغ السحابي على دفعات قصيرة');
+      startCloudLiveCallCycle();
+    } else {
+      setLiveCallStatusUI('idle', 'المتصفح لا يدعم التعرف الصوتي ولا يتيح التسجيل السحابي. جرّب Chrome مع إذن الميكروفون.');
+    }
     return;
   }
 
@@ -549,34 +561,13 @@ function runLiveCallListeningCycle() {
         return;
       }
 
-      // معالجة كلام الطبيب عبر الذكاء الاصطناعي
-      setLiveCallStatusUI('thinking', '🧠 جاري تحليل طلبك ومراجعة بيانات العيادة...');
-      if (window.appendChatMessageUI) {
-        window.appendChatMessageUI('user', `🎙️ ${finalSpeech}`);
-      }
-
       try {
-        const reply = await window.callAI(
-          `[مكالمة صوتية حية ومباشرة مع الطبيب - أجب بإيجاز ووضوح مناسب للنطق الصوتي المباشر]: ${finalSpeech}`
-        );
-
-        if (!window.VoiceVisionState.liveCallActive) return;
-
-        const transcriptBox = document.getElementById('live-call-transcript');
-        if (transcriptBox) transcriptBox.textContent = reply;
-
-        if (window.appendChatMessageUI) {
-          window.appendChatMessageUI('ai', reply);
-        }
-
-        setLiveCallStatusUI('speaking', '🔊 الذكاء الاصطناعي يتحدث الآن...');
-        await window.speakText(reply);
-
-        if (window.VoiceVisionState.liveCallActive) {
-          runLiveCallListeningCycle();
-        }
+        await processLiveCallSpeech(finalSpeech);
+        if (window.VoiceVisionState.liveCallActive) runLiveCallListeningCycle();
       } catch (err) {
-        setLiveCallStatusUI('idle', 'حدث خطأ أثناء الاتصال بالنموذج: ' + err.message);
+        console.warn('Live call AI error:', err);
+        setLiveCallStatusUI('listening', 'تعذر إكمال الرد: ' + err.message + ' — يمكنك المحاولة مجددًا');
+        if (window.VoiceVisionState.liveCallActive) setTimeout(runLiveCallListeningCycle, 700);
       }
     };
 
@@ -590,6 +581,77 @@ function runLiveCallListeningCycle() {
   } catch (e) {
     setLiveCallStatusUI('idle', 'تعذر بدء الاستماع المستمر: ' + e.message);
   }
+}
+
+async function startCloudLiveCallCycle() {
+  if (!window.VoiceVisionState.liveCallActive || window.VoiceVisionState.cloudLiveCycleRunning) return;
+  window.VoiceVisionState.cloudLiveCycleRunning = true;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!window.VoiceVisionState.liveCallActive) {
+      stream.getTracks().forEach(t => t.stop());
+      window.VoiceVisionState.cloudLiveCycleRunning = false;
+      return;
+    }
+    const preferredType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+    const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
+    const chunks = [];
+    window.VoiceVisionState.mediaStream = stream;
+    window.VoiceVisionState.mediaRecorder = recorder;
+    recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
+    recorder.onerror = () => {
+      stream.getTracks().forEach(t => t.stop());
+      window.VoiceVisionState.mediaStream = null;
+      window.VoiceVisionState.mediaRecorder = null;
+      window.VoiceVisionState.cloudLiveCycleRunning = false;
+      if (window.VoiceVisionState.liveCallActive) setTimeout(startCloudLiveCallCycle, 700);
+    };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      window.VoiceVisionState.mediaStream = null;
+      window.VoiceVisionState.mediaRecorder = null;
+      try {
+        if (!window.VoiceVisionState.liveCallActive) return;
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        if (!blob.size) return;
+        setLiveCallStatusUI('thinking', '🧠 جاري تحويل الصوت ومعالجة الطلب...');
+        const speech = (await transcribeAudioWithCloudAI(blob)).trim();
+        if (!speech || !window.VoiceVisionState.liveCallActive) return;
+        const transcriptBox = document.getElementById('live-call-transcript');
+        if (transcriptBox) transcriptBox.textContent = speech;
+        await processLiveCallSpeech(speech);
+      } catch (err) {
+        console.warn('Cloud live STT cycle failed:', err);
+        if (window.VoiceVisionState.liveCallActive) setLiveCallStatusUI('listening', 'تعذر تفريغ الصوت؛ ستتم إعادة المحاولة...');
+      } finally {
+        window.VoiceVisionState.cloudLiveCycleRunning = false;
+        if (window.VoiceVisionState.liveCallActive && !window.VoiceVisionState.isSpeaking) setTimeout(startCloudLiveCallCycle, 500);
+      }
+    };
+    setLiveCallStatusUI('listening', '🎙️ تحدث الآن؛ يتم التقاط الصوت في مقاطع قصيرة');
+    recorder.start();
+    setTimeout(() => { if (recorder.state !== 'inactive') { try { recorder.stop(); } catch (e) {} } }, 6500);
+  } catch (err) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    window.VoiceVisionState.mediaStream = null;
+    window.VoiceVisionState.mediaRecorder = null;
+    window.VoiceVisionState.cloudLiveCycleRunning = false;
+    if (window.VoiceVisionState.liveCallActive) setLiveCallStatusUI('idle', 'تعذر الوصول إلى الميكروفون: ' + err.message);
+  }
+}
+
+async function processLiveCallSpeech(finalSpeech) {
+  if (!window.VoiceVisionState.liveCallActive || !finalSpeech) return;
+  setLiveCallStatusUI('thinking', '🧠 جاري تحليل طلبك ومراجعة بيانات العيادة...');
+  if (window.appendChatMessageUI) window.appendChatMessageUI('user', `🎙️ ${finalSpeech}`);
+  const reply = await window.callAI(`[مكالمة صوتية حية ومباشرة مع الطبيب - أجب بإيجاز ووضوح مناسب للنطق الصوتي المباشر]: ${finalSpeech}`, null, { timeoutMs: 9000 });
+  if (!window.VoiceVisionState.liveCallActive) return;
+  const transcriptBox = document.getElementById('live-call-transcript');
+  if (transcriptBox) transcriptBox.textContent = reply;
+  if (window.appendChatMessageUI) window.appendChatMessageUI('ai', reply);
+  setLiveCallStatusUI('speaking', '🔊 الذكاء الاصطناعي يتحدث الآن...');
+  await window.speakText(reply);
 }
 
 function setLiveCallStatusUI(state, statusText) {

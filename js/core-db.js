@@ -473,7 +473,7 @@ window.ClinicDB = {
 
     if (asksDebts) {
       contextPacket.pendingDebtsList = receipts
-        .filter(r => (Number(r.remainingAmount) || 0) > 0)
+        .filter(r => (Number(r.remainingAmount) || 0) > 0 && (!matchedPatientReceipts.length || matchedPatientReceipts.includes(r)))
         .map(r => ({
           receiptNo: r.receiptNo,
           date: r.date,
@@ -507,7 +507,8 @@ window.ClinicDB = {
       contextPacket.clinicServicesCatalog = window.AppState.settings.services;
     }
 
-    if (asksAllOrReceipts || (!asksInventory && !asksExpenses && !asksDebts && matchedPatientReceipts.length === 0)) {
+    // لا تُرفق سجلات العيادة في الأسئلة العامة؛ هذا يقلل حجم الطلب وزمن الاستجابة.
+    if (asksAllOrReceipts && /سندات|تقرير|راجع|جميع|كل|اليوم|شهر|إيراد|ايراد|قبض/.test(q)) {
       contextPacket.recentReceiptsCompact = receipts.slice(0, 80).map(r => ({
         no: r.receiptNo,
         date: r.date,
