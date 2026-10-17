@@ -565,16 +565,53 @@ window.exportLocalBackupJSON = function() {
 };
 
 window.importLocalBackupJSON = function(event) {
-  const file = event?.target?.files?.[0];
+  const input = event?.target;
+  const file = input?.files?.[0];
   if (!file) return;
+
+  // Protect the browser from accidentally reading a huge or unrelated file.
+  if (file.size > 25 * 1024 * 1024) {
+    if (window.showToast) window.showToast('حجم النسخة الاحتياطية يتجاوز الحد المسموح (25 MB).', 'warning');
+    if (input) input.value = '';
+    return;
+  }
+
   const reader = new FileReader();
+  reader.onerror = () => {
+    if (window.showToast) window.showToast('تعذر قراءة الملف. تحقق من الملف ثم حاول مرة أخرى.', 'warning');
+    if (input) input.value = '';
+  };
+
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.settings) window.AppState.settings = { ...DEFAULT_SETTINGS, ...data.settings };
-      if (Array.isArray(data.receipts)) window.AppState.receipts = data.receipts;
-      if (Array.isArray(data.inventory)) window.AppState.inventory = data.inventory;
-      if (Array.isArray(data.expenses)) window.AppState.expenses = data.expenses;
+      const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+      const validBackup =
+        isObject(data) &&
+        data.app === 'DOCAI_GEMINI_CLINIC_ERP' &&
+        isObject(data.settings) &&
+        Array.isArray(data.receipts) &&
+        Array.isArray(data.inventory) &&
+        Array.isArray(data.expenses);
+
+      if (!validBackup) {
+        throw new Error('INVALID_BACKUP_FORMAT');
+      }
+
+      // Import replaces local clinic records. Never do that without explicit consent.
+      const accepted = window.confirm(
+        'تنبيه: استيراد هذه النسخة سيستبدل الإعدادات والسندات والمخزون والمصروفات الحالية على هذا الجهاز.\n\n' +
+        'تأكد من تنزيل نسخة احتياطية حديثة قبل المتابعة. هل تريد الاستمرار؟'
+      );
+      if (!accepted) {
+        if (window.showToast) window.showToast('تم إلغاء الاستيراد؛ لم يتم تغيير البيانات.', 'info');
+        return;
+      }
+
+      window.AppState.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+      window.AppState.receipts = data.receipts;
+      window.AppState.inventory = data.inventory;
+      window.AppState.expenses = data.expenses;
 
       window.saveSettingsState();
       window.saveReceiptsState();
@@ -583,11 +620,22 @@ window.importLocalBackupJSON = function(event) {
 
       if (window.loadSettingsToUI) window.loadSettingsToUI();
       if (window.initAppUI) window.initAppUI();
-      if (window.showToast) window.showToast('تم استيراد كافة بيانات العيادة بنجاح!', 'success');
+      if (window.showToast) window.showToast('تم استيراد النسخة الاحتياطية بنجاح.', 'success');
     } catch (err) {
-      if (window.showToast) window.showToast('خطأ: الملف المختار ليس ملف نسخة احتياطية صالحاً', 'warning');
+      console.warn('DOCAI backup import rejected:', err);
+      if (window.showToast) {
+        window.showToast(
+          err?.message === 'INVALID_BACKUP_FORMAT'
+            ? 'الملف ليس نسخة احتياطية كاملة وصالحة من DOCAI.'
+            : 'تعذر استيراد الملف؛ تأكد من سلامة ملف JSON.',
+          'warning'
+        );
+      }
+    } finally {
+      if (input) input.value = '';
     }
   };
+
   reader.readAsText(file);
 };
 
