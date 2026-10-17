@@ -47,6 +47,12 @@ async function testOneModel(model, settings) {
 }
 
 window.testAndDiscoverAllModels = async function() {
+  if (window.__docaiModelDiscoveryRunning) {
+    if (window.showToast) window.showToast('فحص النماذج جارٍ بالفعل؛ انتظر حتى يكتمل.', 'info');
+    return window.AI_MODELS_CATALOG || [];
+  }
+  window.__docaiModelDiscoveryRunning = true;
+  try {
   const settings = window.AppState?.settings?.ai || {};
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
@@ -112,6 +118,9 @@ window.testAndDiscoverAllModels = async function() {
   if (window.showToast) window.showToast(`اكتمل الفحص: ${verified.length} نموذجًا اجتاز اختبارًا فعليًا. ${verified.length < 25 ? 'لم تتوفر 25 نماذج عاملة بالمفاتيح والحصص الحالية.' : 'تحقق هدف 25 نموذجًا.'}`, verified.length ? 'success' : 'warning');
   console.info('[DOCAI model discovery]', statusText, verified.map(m => `${m.provider}/${m.id}`));
   return verified;
+  } finally {
+    window.__docaiModelDiscoveryRunning = false;
+  }
 };
 
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
