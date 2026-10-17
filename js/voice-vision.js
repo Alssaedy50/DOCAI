@@ -305,6 +305,9 @@ async function transcribeAudioWithCloudAI(audioBlob) {
 window.speakText = async function(text, forceEngine = null) {
   if (!text) return;
   window.stopSpeaking();
+  const requestId = (window.VoiceVisionState.speechRequestId || 0) + 1;
+  window.VoiceVisionState.speechRequestId = requestId;
+  const isCurrentRequest = () => window.VoiceVisionState.speechRequestId === requestId;
 
   // تنظيف النص من رموز Markdown ليُقرأ بطلاقة
   const cleanText = String(text)
@@ -320,7 +323,8 @@ window.speakText = async function(text, forceEngine = null) {
   const geminiKey = window.AppState?.settings?.ai?.geminiKey;
 
   if (chosenEngine === 'ai_cloud' && geminiKey) {
-    const success = await speakWithGeminiCloudTTS(cleanText, geminiKey);
+    const success = await speakWithGeminiCloudTTS(cleanText, geminiKey, isCurrentRequest);
+    if (!isCurrentRequest()) return;
     if (success) return;
 
     // A cloud TTS failure must never leave the user with silent playback.
@@ -338,7 +342,7 @@ window.speakText = async function(text, forceEngine = null) {
   }
 };
 
-async function speakWithGeminiCloudTTS(text, apiKey) {
+async function speakWithGeminiCloudTTS(text, apiKey, isCurrentRequest = () => true) {
   try {
     window.VoiceVisionState.isSpeaking = true;
     updateSpeakingIndicatorUI(true, 'ai_cloud');
@@ -376,6 +380,8 @@ async function speakWithGeminiCloudTTS(text, apiKey) {
     const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     if (!inlineData || !inlineData.data) throw new Error('No audio bytes returned');
 
+    // A response that arrives after Stop or a newer utterance must not start playback.
+    if (!isCurrentRequest()) return false;
     const played = await playPcm16Base64Audio(inlineData.data, 24000);
     window.VoiceVisionState.isSpeaking = false;
     updateSpeakingIndicatorUI(false);
@@ -469,6 +475,7 @@ function speakWithPhoneNativeTTS(text) {
 }
 
 window.stopSpeaking = function() {
+  window.VoiceVisionState.speechRequestId = (window.VoiceVisionState.speechRequestId || 0) + 1;
   if ('speechSynthesis' in window) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
   }
