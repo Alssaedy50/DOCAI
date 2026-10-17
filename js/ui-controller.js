@@ -203,20 +203,26 @@ window.renderServiceChips = function() {
   if (!container) return;
 
   const services = window.AppState.settings.services || [];
-  container.innerHTML = services.map(srv => {
-    const isSelected = window.AppState.selectedServices.has(srv.name);
+  container.innerHTML = services.map((srv, index) => {
+    const serviceName = String(srv.name || '');
+    const isSelected = window.AppState.selectedServices.has(serviceName);
     const activeClasses = isSelected
       ? 'bg-sky-600 text-white border-sky-400 shadow-md scale-[1.02]'
       : 'bg-slate-800/80 text-slate-200 border-slate-700 hover:border-sky-500/50';
     return `
-      <button type="button"
-        onclick="window.toggleServiceSelection('${escapeHtml(srv.name)}', ${Number(srv.price) || 0})"
-        class="px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center justify-between gap-2 ${activeClasses}">
-        <span>🦷 ${escapeHtml(srv.name)}</span>
+      <button type="button" data-service-index="${index}"
+        class="service-chip px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center justify-between gap-2 ${activeClasses}">
+        <span>🦷 ${escapeHtml(serviceName)}</span>
         <span class="px-1.5 py-0.5 rounded bg-black/25 text-[11px] text-amber-300">${(Number(srv.price) || 0).toLocaleString()}</span>
       </button>
     `;
   }).join('');
+  container.querySelectorAll('.service-chip').forEach(button => {
+    button.addEventListener('click', () => {
+      const service = services[Number(button.dataset.serviceIndex)];
+      if (service) window.toggleServiceSelection(String(service.name || ''), Number(service.price) || 0);
+    });
+  });
 
   // تحديث قائمة الخدمات المرتبطة في نموذج المخزون أيضاً
   const invServiceSelect = document.getElementById('inv-linked-service');
@@ -1197,17 +1203,22 @@ window.saveAllSettingsFromUI = function() {
   const serviceRows = document.querySelectorAll('.settings-service-row');
   if (serviceRows.length > 0) {
     const updatedServices = [];
+    const usedNames = new Set();
     serviceRows.forEach((row, idx) => {
-      const name = row.querySelector('.srv-name-input')?.value?.trim();
+      let name = row.querySelector('.srv-name-input')?.value?.trim();
       const price = Number(row.querySelector('.srv-price-input')?.value) || 0;
       const kwRaw = row.querySelector('.srv-kw-input')?.value || '';
       if (name) {
+        const baseName = name;
+        let suffix = 2;
+        while (usedNames.has(name.toLocaleLowerCase())) name = `${baseName} (${suffix++})`;
+        usedNames.add(name.toLocaleLowerCase());
         updatedServices.push({
-          id: 'srv_' + idx + '_' + Date.now(),
-          name,
-          price,
-          keywords: kwRaw.split(',').map(k => k.trim()).filter(Boolean)
+          id: s.services?.[idx]?.id || ('srv_' + idx + '_' + Date.now()),
+          name, price, keywords: kwRaw.split(',').map(k => k.trim()).filter(Boolean)
         });
+        const nameInput = row.querySelector('.srv-name-input');
+        if (nameInput && nameInput.value.trim() !== name) nameInput.value = name;
       }
     });
     if (updatedServices.length > 0) s.services = updatedServices;
@@ -1259,9 +1270,14 @@ window.renderSettingsServicesList = function() {
 };
 
 window.addNewServiceRow = function() {
-  window.AppState.settings.services.push({
+  const services = window.AppState.settings.services || [];
+  const existing = new Set(services.map(service => String(service.name || '').toLocaleLowerCase()));
+  let name = 'خدمة علاجية جديدة';
+  let suffix = 2;
+  while (existing.has(name.toLocaleLowerCase())) name = `خدمة علاجية جديدة ${suffix++}`;
+  services.push({
     id: 'srv_' + Date.now(),
-    name: 'خدمة علاجية جديدة',
+    name,
     price: 5000,
     keywords: ['خدمة']
   });
