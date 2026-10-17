@@ -163,6 +163,7 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   const models = liveCatalog.length ? liveCatalog : restoredCatalog;
   const requested = options.modelId || settings.selectedMode || 'auto';
   let candidates = requested === 'auto' ? models.filter(m => m.status === 'working') : models.filter(m => m.id === requested);
+  if (requested === 'auto') candidates = candidates.filter(model => Boolean(settings[`${model.provider}Key`]));
   if (requested !== 'auto' && candidates.length === 0) candidates = [{ id: requested, provider: inferAIProvider(requested) }];
   if (requested === 'auto' && candidates.length === 0) {
     if (settings.geminiKey) candidates.push({ id: 'gemini-2.5-flash', provider: 'gemini' });
