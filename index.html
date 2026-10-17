@@ -67,6 +67,111 @@
       .overflow-x-auto { -webkit-overflow-scrolling: touch; }
     }
 
+
+    /* Phase 3: responsive forms, data tables and receipt preview */
+    html, body { max-width: 100%; }
+    main, main > section, main > section > div { min-width: 0; }
+    table { border-spacing: 0; }
+    td, th { overflow-wrap: anywhere; }
+    input, select, textarea { max-width: 100%; }
+    button { touch-action: manipulation; }
+    #receipt-capture-area { box-sizing: border-box; }
+    #receipt-preview-wrapper { min-width: 0; }
+    #tab-section-ai-chat > div { min-height: 420px; }
+    @media (max-width: 640px) {
+      /* Keep the app shell within the viewport */
+      header { gap: 8px; }
+      header > div { min-width: 0; flex-wrap: wrap; }
+      main { width: 100%; max-width: 100%; }
+      main .grid { min-width: 0; }
+      main button, main a[role="button"] { max-width: 100%; white-space: normal; }
+      #smart-ai-receipt-bar .flex.items-center.gap-2.shrink-0 { flex-wrap: wrap; }
+      #smart-ai-receipt-bar .flex.items-center.gap-2.shrink-0 button { flex: 1 1 125px; justify-content: center; }
+      #tab-section-receipt .grid.grid-cols-1.lg\\:grid-cols-12,
+      #tab-section-receipt .grid.grid-cols-1.lg\\:grid-cols-10,
+      #tab-section-receipt .grid.grid-cols-1.lg\\:grid-cols-2 { grid-template-columns: minmax(0, 1fr) !important; }
+      #receipt-capture-area { padding: 10px !important; font-size: 11px; }
+      #receipt-capture-area > .relative.z-10.flex.items-center.justify-between { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+      #receipt-capture-area .clinic-logo-img { width: 42px !important; height: 42px !important; }
+      #receipt-capture-area .text-base, #receipt-capture-area .sm\\:text-lg { font-size: 12px !important; }
+      #receipt-capture-area .px-4 { padding-left: 8px !important; padding-right: 8px !important; }
+      #receipt-preview-wrapper > div:first-child { flex-wrap: wrap; }
+      #receipt-preview-wrapper > div:first-child button { flex: 1 1 30%; }
+      #records-table-body tr, #inventory-table-body tr, #expenses-table-body tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        margin: 0 0 12px;
+        padding: 8px 10px;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        background: #0f172a;
+        overflow: hidden;
+      }
+      #tab-section-records table, #tab-section-inventory table, #tab-section-finance table { display: block; width: 100%; }
+      #tab-section-records table thead, #tab-section-inventory table thead, #tab-section-finance table thead { display: none; }
+      #tab-section-records table tbody, #tab-section-inventory table tbody, #tab-section-finance table tbody { display: block; width: 100%; }
+      #records-table-body td, #inventory-table-body td, #expenses-table-body td {
+        display: grid;
+        grid-template-columns: minmax(105px, 38%) minmax(0, 1fr);
+        align-items: start;
+        gap: 8px;
+        min-width: 0;
+        padding: 9px 2px !important;
+        border-bottom: 1px solid #1e293b;
+        overflow-wrap: anywhere;
+      }
+      #records-table-body td:last-child, #inventory-table-body td:last-child, #expenses-table-body td:last-child { border-bottom: 0; }
+      #records-table-body td::before, #inventory-table-body td::before, #expenses-table-body td::before {
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1.6;
+        content: "";
+      }
+      #records-table-body td:nth-child(1)::before { content: "رقم السند"; }
+      #records-table-body td:nth-child(2)::before { content: "التاريخ"; }
+      #records-table-body td:nth-child(3)::before { content: "اسم المريض"; }
+      #records-table-body td:nth-child(4)::before { content: "رقم الهاتف"; }
+      #records-table-body td:nth-child(5)::before { content: "الخدمات"; }
+      #records-table-body td:nth-child(6)::before { content: "المقبوض / الإجمالي"; }
+      #records-table-body td:nth-child(7)::before { content: "حالة السداد"; }
+      #records-table-body td:nth-child(8)::before { content: "الإجراءات"; }
+      #inventory-table-body td:nth-child(1)::before { content: "المادة والوصف"; }
+      #inventory-table-body td:nth-child(2)::before { content: "الكمية والوحدة"; }
+      #inventory-table-body td:nth-child(3)::before { content: "حد التنبيه"; }
+      #inventory-table-body td:nth-child(4)::before { content: "سعر الوحدة"; }
+      #inventory-table-body td:nth-child(5)::before { content: "القيمة الإجمالية"; }
+      #inventory-table-body td:nth-child(6)::before { content: "الحالة"; }
+      #inventory-table-body td:nth-child(7)::before { content: "إجراءات التحكم"; }
+      #expenses-table-body td:nth-child(1)::before { content: "التاريخ"; }
+      #expenses-table-body td:nth-child(2)::before { content: "بيان المصروف"; }
+      #expenses-table-body td:nth-child(3)::before { content: "التصنيف"; }
+      #expenses-table-body td:nth-child(4)::before { content: "المبلغ"; }
+      #expenses-table-body td:nth-child(5)::before { content: "إجراء"; }
+      #records-table-body td[colspan], #inventory-table-body td[colspan], #expenses-table-body td[colspan] {
+        display: block;
+        text-align: center;
+        border: 0;
+      }
+      #records-table-body td[colspan]::before, #inventory-table-body td[colspan]::before, #expenses-table-body td[colspan]::before { content: none; }
+      #records-table-body td > div, #inventory-table-body td > div, #expenses-table-body td > div { min-width: 0; flex-wrap: wrap; }
+      #records-table-body button, #inventory-table-body button, #expenses-table-body button { min-height: 34px; }
+      #tab-section-records .flex.items-center.gap-2, #tab-section-inventory .flex.items-center.gap-2 { flex-wrap: wrap; }
+      #tab-section-records .flex.items-center.gap-2 > *, #tab-section-inventory .flex.items-center.gap-2 > * { max-width: 100%; }
+      #tab-section-finance #exp-title, #tab-section-finance #exp-amount { width: 100%; }
+      #tab-section-ai-chat > div { height: 72dvh; min-height: 420px; }
+      #chat-user-input { min-width: 0; }
+      #signature-modal > div, #live-voice-call-modal > div { max-height: calc(100dvh - 24px); overflow-y: auto; }
+      #signature-pad-canvas { height: 150px; }
+    }
+    @media (max-width: 380px) {
+      #header-system-title { max-width: 48vw; font-size: 12px; }
+      #header-system-badge { max-width: 48vw; }
+      #records-table-body td, #inventory-table-body td, #expenses-table-body td { grid-template-columns: minmax(90px, 34%) minmax(0, 1fr); gap: 6px; }
+      #receipt-capture-area { padding: 8px !important; }
+    }
+
     /* إعدادات الطباعة النظيفة لحل مشكلة الصفحة الفارغة نهائياً */
     @media print {
       body {
