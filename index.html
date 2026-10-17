@@ -17,7 +17,7 @@
   <!-- مكتبات التصدير: html2canvas + jsPDF + QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'}else if(this.dataset.fallback==='1'){this.dataset.fallback='2';this.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'}else{this.onerror=null;console.error('QR library failed to load')}"></script>
 
   <style>
     :root {
