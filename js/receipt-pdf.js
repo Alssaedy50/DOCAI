@@ -282,7 +282,7 @@ window.shareReceiptViaWhatsApp = function() {
 
 /* ==================== 6. توليد رمز الاستجابة السريعة (QR Code) الموثق للسند ==================== */
 
-window.updateReceiptQRCode = function(customData = null) {
+window.updateReceiptQRCode = async function(customData = null) {
   const qrContainer = document.getElementById('receipt-qr-box');
   if (!qrContainer) return;
 
@@ -304,30 +304,65 @@ window.updateReceiptQRCode = function(customData = null) {
 
   qrContainer.innerHTML = '';
 
-  if (typeof QRCode !== 'undefined') {
+  // qrcodejs exposes QRCode as a constructor; some alternate libraries expose
+  // QRCode.toCanvas. Prefer the constructor loaded by index.html.
+  const QR = window.QRCode;
+
+  if (typeof QR === 'function') {
     try {
-      new QRCode(qrContainer, {
+      new QR(qrContainer, {
         text: qrPayload,
-        width: 72,
-        height: 72,
-        colorDark: '#0B2545',
+        width: 80,
+        height: 80,
+        colorDark: '#0f172a',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+        correctLevel: QR.CorrectLevel?.M
       });
+
+      const generated = qrContainer.querySelector('canvas, img');
+      if (generated) {
+        generated.style.display = 'block';
+        generated.style.width = '80px';
+        generated.style.height = '80px';
+        generated.style.maxWidth = '100%';
+      }
       return;
     } catch (e) {
-      console.warn('QRCode library fallback:', e);
+      console.warn('QRCode constructor failed; trying toCanvas fallback:', e);
+      qrContainer.innerHTML = '';
     }
   }
 
-  // Do not use a remote QR image: it can fail offline and taint html2canvas/PDF exports.
-  qrContainer.textContent = '';
+  if (QR && typeof QR.toCanvas === 'function') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 80;
+    canvas.height = 80;
+    qrContainer.appendChild(canvas);
+
+    try {
+      await QR.toCanvas(canvas, qrPayload, {
+        width: 80,
+        margin: 1,
+        color: { dark: '#0f172a', light: '#ffffff' },
+        errorCorrectionLevel: 'M'
+      });
+      canvas.style.display = 'block';
+      canvas.style.width = '80px';
+      canvas.style.height = '80px';
+      return;
+    } catch (e) {
+      console.warn('QRCode.toCanvas fallback failed:', e);
+      qrContainer.innerHTML = '';
+    }
+  }
+
+  // Avoid remote QR images: they may fail offline or taint image/PDF exports.
   const unavailable = document.createElement('div');
   unavailable.setAttribute('role', 'status');
-  unavailable.style.cssText = 'width:72px;height:72px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:#64748b;background:#fff';
+  unavailable.style.cssText = 'width:80px;height:80px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:#64748b;background:#fff';
   unavailable.textContent = 'QR library unavailable';
   qrContainer.appendChild(unavailable);
-  console.error('QRCode.js is not loaded; QR generation was not possible.');
+  console.error('QRCode.js is not loaded; QR generation was not possible.');');
 };
 
 /* ==================== 7. لوحة التوقيع الإلكتروني الحر (للمحاسب/الطبيب وللمستلم) ==================== */
