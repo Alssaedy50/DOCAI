@@ -234,7 +234,20 @@ window.ClinicDB = {
     }
 
     if (idx > -1) {
+      // Keep the original services before updating the receipt. Only newly
+      // added services should consume inventory during an edit.
+      const previousServices = Array.isArray(list[idx].services) ? list[idx].services : [];
+      const nextServices = Array.isArray(cleanData.services) ? cleanData.services : [];
+      const newlyAddedServices = nextServices.filter(service => !previousServices.includes(service));
+
       list[idx] = { ...list[idx], ...cleanData };
+
+      if (
+        window.AppState.settings.features.autoInventory &&
+        newlyAddedServices.length > 0
+      ) {
+        this.deductInventoryForServices(newlyAddedServices);
+      }
     } else {
       cleanData.id = cleanData.id || ('REC_' + Date.now());
       cleanData.createdAt = new Date().toISOString();
