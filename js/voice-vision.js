@@ -315,10 +315,20 @@ window.speakText = async function(text, forceEngine = null) {
   if (chosenEngine === 'ai_cloud' && geminiKey) {
     const success = await speakWithGeminiCloudTTS(cleanText, geminiKey);
     if (success) return;
+
+    // A cloud TTS failure must never leave the user with silent playback.
+    if (window.showToast) {
+      window.showToast('تعذر الصوت السحابي؛ سيتم استخدام صوت الهاتف العربي المتاح.', 'info');
+    }
+  } else if (chosenEngine === 'ai_cloud' && !geminiKey && window.showToast) {
+    window.showToast('لا يوجد مفتاح Gemini للنطق السحابي؛ سيتم استخدام صوت الهاتف.', 'info');
   }
 
-  // النطق عبر قارئ الهاتف المحلي (SpeechSynthesis)
-  await speakWithPhoneNativeTTS(cleanText);
+  // Use the phone's speech synthesis as the primary or fallback voice engine.
+  const spoken = await speakWithPhoneNativeTTS(cleanText);
+  if (!spoken && window.showToast) {
+    window.showToast('تعذر تشغيل النطق الصوتي. تحقق من دعم المتصفح للأصوات العربية.', 'warning');
+  }
 };
 
 async function speakWithGeminiCloudTTS(text, apiKey) {
@@ -326,31 +336,43 @@ async function speakWithGeminiCloudTTS(text, apiKey) {
     window.VoiceVisionState.isSpeaking = true;
     updateSpeakingIndicatorUI(true, 'ai_cloud');
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: text.slice(0, 900) }] }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Aoede' }
+    // Bound cloud TTS latency. Abort a stalled request so the local Arabic
+    // voice can take over instead of leaving the interface silent.
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2200) : null;
+
+    let data;
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller?.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: text.slice(0, 900) }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' }
+              }
             }
           }
-        }
-      })
-    });
+        })
+      });
 
-    if (!res.ok) throw new Error('Gemini TTS endpoint fallback');
-    const data = await res.json();
+      if (!res.ok) throw new Error(`Gemini TTS HTTP ${res.status}`);
+      data = await res.json();
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+
     const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     if (!inlineData || !inlineData.data) throw new Error('No audio bytes returned');
 
-    await playPcm16Base64Audio(inlineData.data, 24000);
+    const played = await playPcm16Base64Audio(inlineData.data, 24000);
     window.VoiceVisionState.isSpeaking = false;
     updateSpeakingIndicatorUI(false);
-    return true;
+    return played;
   } catch (e) {
     window.VoiceVisionState.isSpeaking = false;
     updateSpeakingIndicatorUI(false);
@@ -408,7 +430,12 @@ function speakWithPhoneNativeTTS(text) {
       utterance.rate = 1.02;
 
       const voices = window.speechSynthesis.getVoices() || [];
-      const arVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+      const arabicVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+      const arVoice =
+        arabicVoices.find(v => /google/i.test(v.name) && /ar|arab/i.test(`${v.lang} ${v.name}`)) ||
+        arabicVoices.find(v => /ar[-_]ye/i.test(v.lang)) ||
+        arabicVoices.find(v => /ar[-_]sa/i.test(v.lang)) ||
+        arabicVoices[0];
       if (arVoice) utterance.voice = arVoice;
 
       window.VoiceVisionState.isSpeaking = true;
