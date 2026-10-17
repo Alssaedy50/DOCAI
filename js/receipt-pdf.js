@@ -210,7 +210,7 @@ window.exportReceiptAsPDF = async function(format = null) {
         format: [paperWidthMm, paperHeightMm]
       });
 
-      pdf.addImage(imgData, 'JPEG', marginMm, marginMm, contentWidthMm, contentHeightMm, undefined, 'FAST');
+      pdf.addImage(imgData, 'PNG', marginMm, marginMm, contentWidthMm, contentHeightMm, undefined, 'FAST');
     } else {
       // قياس A5 القياسي (أفقي 210x148mm أو عمودي حسب تناسب أبعاد السند)
       const isLandscape = aspectRatio < 0.95;
@@ -237,7 +237,7 @@ window.exportReceiptAsPDF = async function(format = null) {
       const offsetX = (pageWidth - renderW) / 2;
       const offsetY = (pageHeight - renderH) / 2;
 
-      pdf.addImage(imgData, 'JPEG', offsetX, offsetY, renderW, renderH, undefined, 'FAST');
+      pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderW, renderH, undefined, 'FAST');
     }
 
     pdf.save(fileName);
