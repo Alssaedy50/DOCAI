@@ -48,6 +48,22 @@ async function testOneModel(model, settings) {
 
 window.testAndDiscoverAllModels = async function() {
   const settings = window.AppState?.settings?.ai || {};
+  if (!settings.geminiKey && !settings.groqKey && !settings.openrouterKey) {
+    try {
+      const response = await fetch('/api/ai', { method: 'GET', cache: 'no-store' });
+      const server = await response.json();
+      if (response.ok && Array.isArray(server.configuredProviders) && server.configuredProviders.length) {
+        if (window.showToast) window.showToast('خدمة Vercel متصلة. مفاتيح الخادم مهيأة لدى: ' + server.configuredProviders.join('، ') + '. سيتم اختيار نموذج تلقائياً عند إرسال الرسالة.', 'success');
+        if (window.updateModelSelectDropdown) window.updateModelSelectDropdown();
+        return [];
+      }
+      if (window.showToast) window.showToast('لم يجد خادم Vercel مفاتيح AI مهيأة. تأكد من مفاتيح Production وPreview ثم أعد النشر.', 'warning');
+      return [];
+    } catch (error) {
+      if (window.showToast) window.showToast('تعذر الوصول إلى خدمة AI على Vercel. افتح رابط الموقع المنشور ثم أعد المحاولة.', 'warning');
+      return [];
+    }
+  }
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
   if (window.showToast) window.showToast('جارٍ اكتشاف النماذج من المزودين ثم اختبار كل نموذج على حدة…', 'info');
