@@ -1,0 +1,35 @@
+name: Validate JavaScript
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+      - "fix/**"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          set -eu
+          for file in js/*.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+      - name: Verify critical entry points
+        run: |
+          grep -q "window.callAI" js/ai-router.js
+          grep -q "window.updateReceiptQRCode" js/receipt-pdf.js
+          grep -q "window.toggleServiceSelectionById" js/ui-controller.js
+          grep -q "window.importLocalBackupJSON" js/core-db.js

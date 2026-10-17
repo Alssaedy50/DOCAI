@@ -29,10 +29,27 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     throw new Error('مكتبة التصوير html2canvas غير محملة بعد، يرجى التحقق من الاتصال بالإنترنت');
   }
 
-  // انتظار جاهزية كافة الخطوط العربية (Cairo / Tajawal) قبل الرسم
+  // Refresh receipt values and QR before cloning; canvas pixels are not copied by cloneNode.
+  if (window.updateLiveReceiptPreview) window.updateLiveReceiptPreview();
+  if (window.AppState?.settings?.features?.showQrCode !== false && window.updateReceiptQRCode) {
+    await window.updateReceiptQRCode();
+  }
+  const waitForImages = async root => {
+    const images = Array.from(root.querySelectorAll('img'));
+    await Promise.all(images.map(img => {
+      if (img.complete && img.naturalWidth > 0) return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      return new Promise(resolve => {
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        setTimeout(done, 2500);
+      });
+    }));
+  };
   if (document.fonts && document.fonts.ready) {
     try { await document.fonts.ready; } catch (e) {}
   }
+  await waitForImages(sourceEl);
 
   // إنشاء حاوية معزولة خارج الشاشة بعرض قياسي ثابت 680px
   const offscreenWrapper = document.createElement('div');
@@ -46,6 +63,18 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
   offscreenWrapper.setAttribute('dir', 'rtl');
 
   const clone = sourceEl.cloneNode(true);
+  const sourceCanvases = Array.from(sourceEl.querySelectorAll('canvas'));
+  const clonedCanvases = Array.from(clone.querySelectorAll('canvas'));
+  sourceCanvases.forEach((sourceCanvas, index) => {
+    const targetCanvas = clonedCanvases[index];
+    if (!targetCanvas) return;
+    targetCanvas.width = sourceCanvas.width;
+    targetCanvas.height = sourceCanvas.height;
+    try {
+      const targetContext = targetCanvas.getContext('2d');
+      if (targetContext) targetContext.drawImage(sourceCanvas, 0, 0);
+    } catch (error) { console.warn('Unable to copy receipt canvas into export clone:', error); }
+  });
   clone.style.width = '680px';
   clone.style.maxWidth = '680px';
   clone.style.margin = '0';
@@ -55,6 +84,13 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
   clone.style.background = '#ffffff';
   clone.style.fontFamily = "'Cairo', sans-serif";
   clone.style.letterSpacing = '0px';
+  clone.querySelectorAll('.clinic-logo-img').forEach(img => {
+    img.style.width = '68px';
+    img.style.height = '68px';
+    img.style.maxWidth = '68px';
+    img.style.objectFit = 'contain';
+    img.style.imageRendering = 'auto';
+  });
 
   // إزالة جميع الكلاسات التي تسبب تداخل الحروف العربية أو قص النصوص في html2canvas
   const allElements = clone.querySelectorAll('*');
@@ -64,6 +100,15 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     el.style.fontVariantLigatures = 'normal';
     if (el.classList.contains('no-export') || el.classList.contains('no-print')) {
       el.style.display = 'none';
+    }
+    // Keep the clinic logo crisp and prevent the watermark from competing with receipt text.
+    if (el.id === 'preview-watermark-img') el.style.opacity = '0.02';
+    if (el.classList.contains('clinic-logo-img')) {
+      el.style.width = '72px';
+      el.style.height = '72px';
+      el.style.objectFit = 'contain';
+      el.style.opacity = '1';
+      el.style.filter = 'none';
     }
   });
 
@@ -77,7 +122,7 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
     const canvas = await html2canvas(clone, {
       scale: scaleFactor,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       backgroundColor: '#ffffff',
       logging: false,
       width: 680,
@@ -155,7 +200,7 @@ window.exportReceiptAsPDF = async function(format = null) {
     }
 
     const canvas = await window.captureCleanReceiptCanvas(2.5);
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const imgData = canvas.toDataURL('image/png');
     const imgWidthPx = canvas.width;
     const imgHeightPx = canvas.height;
     const aspectRatio = imgHeightPx / imgWidthPx;
@@ -180,7 +225,7 @@ window.exportReceiptAsPDF = async function(format = null) {
         format: [paperWidthMm, paperHeightMm]
       });
 
-      pdf.addImage(imgData, 'JPEG', marginMm, marginMm, contentWidthMm, contentHeightMm, undefined, 'FAST');
+      pdf.addImage(imgData, 'PNG', marginMm, marginMm, contentWidthMm, contentHeightMm, undefined, 'FAST');
     } else {
       // قياس A5 القياسي (أفقي 210x148mm أو عمودي حسب تناسب أبعاد السند)
       const isLandscape = aspectRatio < 0.95;
@@ -207,7 +252,7 @@ window.exportReceiptAsPDF = async function(format = null) {
       const offsetX = (pageWidth - renderW) / 2;
       const offsetY = (pageHeight - renderH) / 2;
 
-      pdf.addImage(imgData, 'JPEG', offsetX, offsetY, renderW, renderH, undefined, 'FAST');
+      pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderW, renderH, undefined, 'FAST');
     }
 
     pdf.save(fileName);
@@ -312,8 +357,8 @@ window.updateReceiptQRCode = async function(customData = null) {
     try {
       new QR(qrContainer, {
         text: qrPayload,
-        width: 80,
-        height: 80,
+        width: 96,
+        height: 96,
         colorDark: '#0f172a',
         colorLight: '#ffffff',
         correctLevel: QR.CorrectLevel?.M
@@ -322,8 +367,8 @@ window.updateReceiptQRCode = async function(customData = null) {
       const generated = qrContainer.querySelector('canvas, img');
       if (generated) {
         generated.style.display = 'block';
-        generated.style.width = '80px';
-        generated.style.height = '80px';
+        generated.style.width = '96px';
+        generated.style.height = '96px';
         generated.style.maxWidth = '100%';
       }
       return;
@@ -335,20 +380,20 @@ window.updateReceiptQRCode = async function(customData = null) {
 
   if (QR && typeof QR.toCanvas === 'function') {
     const canvas = document.createElement('canvas');
-    canvas.width = 80;
-    canvas.height = 80;
+    canvas.width = 96;
+    canvas.height = 96;
     qrContainer.appendChild(canvas);
 
     try {
       await QR.toCanvas(canvas, qrPayload, {
-        width: 80,
+        width: 96,
         margin: 1,
         color: { dark: '#0f172a', light: '#ffffff' },
         errorCorrectionLevel: 'M'
       });
       canvas.style.display = 'block';
-      canvas.style.width = '80px';
-      canvas.style.height = '80px';
+      canvas.style.width = '96px';
+      canvas.style.height = '96px';
       return;
     } catch (e) {
       console.warn('QRCode.toCanvas fallback failed:', e);

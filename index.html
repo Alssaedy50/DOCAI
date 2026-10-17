@@ -17,7 +17,7 @@
   <!-- مكتبات التصدير: html2canvas + jsPDF + QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'}else if(this.dataset.fallback==='1'){this.dataset.fallback='2';this.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'}else{this.onerror=null;console.error('QR library failed to load')}"></script>
 
   <style>
     :root {
@@ -52,8 +52,8 @@
     body { min-width: 320px; }
     button, input, select, textarea { min-width: 0; }
     img, canvas { max-width: 100%; }
-    #receipt-qr-box { width: 80px; min-width: 80px; min-height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    #receipt-qr-box canvas, #receipt-qr-box img { width: 72px !important; height: 72px !important; max-width: none; display: block; image-rendering: pixelated; }
+    #receipt-qr-box { width: 112px; min-width: 112px; min-height: 112px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #receipt-qr-box canvas, #receipt-qr-box img { width: 88px !important; height: 88px !important; max-width: none; display: block; image-rendering: pixelated; }
     @media (max-width: 640px) {
       header > div { align-items: flex-start; }
       header .clinic-logo-img { width: 36px; height: 36px; }
@@ -93,6 +93,8 @@
       #receipt-capture-area { padding: 10px !important; font-size: 11px; }
       #receipt-capture-area > .relative.z-10.flex.items-center.justify-between { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
       #receipt-capture-area .clinic-logo-img { width: 42px !important; height: 42px !important; }
+      #receipt-qr-box { width: 96px; min-width: 96px; min-height: 96px; }
+      #receipt-qr-box canvas, #receipt-qr-box img { width: 80px !important; height: 80px !important; }
       #receipt-capture-area .text-base, #receipt-capture-area .sm\:text-lg { font-size: 12px !important; }
       #receipt-capture-area .px-4 { padding-left: 8px !important; padding-right: 8px !important; }
       #receipt-preview-wrapper > div:first-child { flex-wrap: wrap; }
@@ -299,28 +301,11 @@
       <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 space-y-2.5">
         <div class="text-xs font-extrabold text-amber-400">🎙️ نظام الصوت المزدوج (الهاتف vs السحابي)</div>
         <div id="active-stt-badge" class="text-[11px] text-sky-300 font-bold">🎙️ الإدخال: صوت النماذج السحابية (AI)</div>
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" onclick="window.setVoiceEngineMode('stt', 'phone_native')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
-            📱 مايك الهاتف
-          </button>
-          <button type="button" onclick="window.setVoiceEngineMode('stt', 'ai_cloud')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-sky-700 text-[11px] font-bold text-white border border-slate-700">
-            ☁️ مايك النماذج AI
-          </button>
-        </div>
-
         <div id="active-tts-badge" class="text-[11px] text-emerald-300 font-bold pt-1">🔊 النطق: صوت النماذج السحابية (AI)</div>
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" onclick="window.setVoiceEngineMode('tts', 'phone_native')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
-            📱 نطق الهاتف
-          </button>
-          <button type="button" onclick="window.setVoiceEngineMode('tts', 'ai_cloud')"
-            class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-700 text-[11px] font-bold text-white border border-slate-700">
-            ☁️ نطق النماذج AI
-          </button>
-        </div>
+        <button type="button" onclick="window.switchMainTab('settings'); window.toggleSidebarDrawer(false)"
+          class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-white border border-slate-700">
+          ⚙️ إدارة إعدادات الصوت
+        </button>
       </div>
 
       <!-- النسخ الاحتياطي السريع -->

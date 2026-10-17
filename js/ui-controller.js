@@ -203,20 +203,28 @@ window.renderServiceChips = function() {
   if (!container) return;
 
   const services = window.AppState.settings.services || [];
+  services.forEach((srv, index) => { if (!srv.id) srv.id = `srv_legacy_${index}_${Date.now()}`; });
+  const selectedIds = window.AppState.selectedServiceIds || (window.AppState.selectedServiceIds = new Set());
   container.innerHTML = services.map(srv => {
-    const isSelected = window.AppState.selectedServices.has(srv.name);
+    const isSelected = selectedIds.size ? selectedIds.has(srv.id) : window.AppState.selectedServices.has(srv.name);
     const activeClasses = isSelected
       ? 'bg-sky-600 text-white border-sky-400 shadow-md scale-[1.02]'
       : 'bg-slate-800/80 text-slate-200 border-slate-700 hover:border-sky-500/50';
     return `
-      <button type="button"
-        onclick="window.toggleServiceSelection('${escapeHtml(srv.name)}', ${Number(srv.price) || 0})"
+      <button type="button" data-service-id="${escapeHtml(srv.id)}"
         class="px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center justify-between gap-2 ${activeClasses}">
         <span>🦷 ${escapeHtml(srv.name)}</span>
         <span class="px-1.5 py-0.5 rounded bg-black/25 text-[11px] text-amber-300">${(Number(srv.price) || 0).toLocaleString()}</span>
       </button>
     `;
   }).join('');
+
+  container.querySelectorAll('button[data-service-id]').forEach(button => {
+    button.addEventListener('click', () => {
+      const service = services.find(srv => String(srv.id) === button.dataset.serviceId);
+      if (service) window.toggleServiceSelectionById(service.id, Number(service.price) || 0);
+    });
+  });
 
   // تحديث قائمة الخدمات المرتبطة في نموذج المخزون أيضاً
   const invServiceSelect = document.getElementById('inv-linked-service');
@@ -228,33 +236,53 @@ window.renderServiceChips = function() {
   }
 };
 
-window.toggleServiceSelection = function(serviceName, price = 0) {
-  const set = window.AppState.selectedServices;
+window.getSelectedServiceNames = function() {
+  const state = window.AppState;
+  const ids = state?.selectedServiceIds;
+  const services = state?.settings?.services || [];
+  if (ids && ids.size) {
+    const selected = services.filter(srv => ids.has(srv.id)).map(srv => srv.name);
+    const catalogNames = new Set(services.map(srv => srv.name));
+    (state.selectedServices || new Set()).forEach(name => { if (!catalogNames.has(name)) selected.push(name); });
+    return selected;
+  }
+  return Array.from(state?.selectedServices || []);
+};
+
+window.toggleServiceSelectionById = function(serviceId, price = 0) {
+  const state = window.AppState;
+  const services = state?.settings?.services || [];
+  const service = services.find(srv => String(srv.id) === String(serviceId));
+  if (!service) return;
+  const selectedIds = state.selectedServiceIds || (state.selectedServiceIds = new Set());
+  const selectedNames = state.selectedServices || (state.selectedServices = new Set());
+  const wasSelected = selectedIds.has(service.id) || (!selectedIds.size && selectedNames.has(service.name));
   const totalInput = document.getElementById('rec-total-amount');
   const paidInput = document.getElementById('rec-paid-amount');
-  const autoPrice = window.AppState.settings.features.autoPrice !== false;
-
+  const autoPrice = state.settings.features.autoPrice !== false;
   let currentTotal = Number(totalInput?.value) || 0;
-
-  if (set.has(serviceName)) {
-    set.delete(serviceName);
-    if (autoPrice && price > 0) {
-      currentTotal = Math.max(0, currentTotal - Number(price));
-    }
+  if (wasSelected) {
+    selectedIds.delete(service.id);
+    if (autoPrice && price > 0) currentTotal = Math.max(0, currentTotal - Number(price));
   } else {
-    set.add(serviceName);
-    if (autoPrice && price > 0) {
-      currentTotal += Number(price);
-    }
+    selectedIds.add(service.id);
+    if (autoPrice && price > 0) currentTotal += Number(price);
   }
-
+  const anotherSameNameSelected = services.some(srv => selectedIds.has(srv.id) && srv.name === service.name);
+  if (anotherSameNameSelected) selectedNames.add(service.name); else selectedNames.delete(service.name);
   if (autoPrice && totalInput) {
     totalInput.value = currentTotal || '';
-    if (paidInput && (!paidInput.value || Number(paidInput.value) === 0 || !window.AppState.editingReceiptId)) {
-      paidInput.value = currentTotal || '';
-    }
+    if (paidInput && (!paidInput.value || Number(paidInput.value) === 0 || !state.editingReceiptId)) paidInput.value = currentTotal || '';
   }
+  window.renderServiceChips();
+  window.updateLiveReceiptPreview();
+};
 
+window.toggleServiceSelection = function(serviceName, price = 0) {
+  const service = (window.AppState.settings.services || []).find(srv => srv.name === serviceName);
+  if (service?.id) return window.toggleServiceSelectionById(service.id, price);
+  const set = window.AppState.selectedServices;
+  if (set.has(serviceName)) set.delete(serviceName); else set.add(serviceName);
   window.renderServiceChips();
   window.updateLiveReceiptPreview();
 };
@@ -301,7 +329,7 @@ window.updateLiveReceiptPreview = function() {
   const paymentMethod = document.getElementById('rec-payment-method')?.value || 'نقداً (Cash)';
   const notes = document.getElementById('rec-notes')?.value?.trim() || '';
 
-  const selectedServicesArr = Array.from(window.AppState.selectedServices);
+  const selectedServicesArr = window.getSelectedServiceNames ? window.getSelectedServiceNames() : Array.from(window.AppState.selectedServices);
   const servicesText = selectedServicesArr.length > 0
     ? selectedServicesArr.join(' + ')
     : (notes || 'كشف وخدمات علاجية للأسنان');
@@ -353,6 +381,7 @@ window.updateLiveReceiptPreview = function() {
 window.resetReceiptForm = function() {
   window.AppState.editingReceiptId = null;
   window.AppState.selectedServices.clear();
+  window.AppState.selectedServiceIds?.clear();
   window.AppState.currentReceiverSig = '';
   window.AppState.currentAccountantSig = window.AppState.settings.appearance.permanentAccountantSig || '';
 
@@ -399,7 +428,7 @@ window.saveCurrentReceiptFromUI = function() {
     date: document.getElementById('rec-date')?.value || new Date().toISOString().slice(0, 10),
     patientName: patientName,
     patientPhone: document.getElementById('rec-patient-phone')?.value?.trim() || '',
-    services: Array.from(window.AppState.selectedServices),
+    services: window.getSelectedServiceNames ? window.getSelectedServiceNames() : Array.from(window.AppState.selectedServices),
     totalAmount: totalAmount,
     paidAmount: paidAmount,
     remainingAmount: Math.max(0, totalAmount - paidAmount),
@@ -462,6 +491,7 @@ window.handleSmartBarParse = async function() {
   // مطابقة الخدمات العلاجية
   if (Array.isArray(parsed.services) && parsed.services.length > 0) {
     window.AppState.selectedServices.clear();
+    window.AppState.selectedServiceIds?.clear();
     const catalog = window.AppState.settings.services || [];
     parsed.services.forEach(srvText => {
       const found = catalog.find(c =>
@@ -469,8 +499,10 @@ window.handleSmartBarParse = async function() {
         srvText.includes(c.name) ||
         (c.keywords || []).some(k => srvText.includes(k))
       );
-      if (found) window.AppState.selectedServices.add(found.name);
-      else window.AppState.selectedServices.add(srvText);
+      if (found) {
+        window.AppState.selectedServices.add(found.name);
+        if (found.id) window.AppState.selectedServiceIds.add(found.id);
+      } else window.AppState.selectedServices.add(srvText);
     });
   }
 
@@ -597,6 +629,8 @@ window.editReceiptRecord = function(id) {
 
   window.AppState.editingReceiptId = rec.id;
   window.AppState.selectedServices = new Set(Array.isArray(rec.services) ? rec.services : []);
+  const receiptServiceNames = new Set(Array.isArray(rec.services) ? rec.services : []);
+  window.AppState.selectedServiceIds = new Set((window.AppState.settings.services || []).filter(srv => receiptServiceNames.has(srv.name)).map(srv => srv.id));
 
   const setVal = (elId, val) => {
     const el = document.getElementById(elId);
@@ -1202,15 +1236,18 @@ window.saveAllSettingsFromUI = function() {
       const price = Number(row.querySelector('.srv-price-input')?.value) || 0;
       const kwRaw = row.querySelector('.srv-kw-input')?.value || '';
       if (name) {
-        updatedServices.push({
-          id: 'srv_' + idx + '_' + Date.now(),
-          name,
-          price,
-          keywords: kwRaw.split(',').map(k => k.trim()).filter(Boolean)
-        });
+        const id = row.dataset.serviceId || 'srv_' + idx + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        updatedServices.push({ id, name, price, keywords: kwRaw.split(',').map(k => k.trim()).filter(Boolean) });
       }
     });
-    if (updatedServices.length > 0) s.services = updatedServices;
+    if (updatedServices.length > 0) {
+      const usedIds = new Set();
+      updatedServices.forEach((srv, idx) => {
+        if (!srv.id || usedIds.has(srv.id)) srv.id = 'srv_' + idx + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        usedIds.add(srv.id);
+      });
+      s.services = updatedServices;
+    }
   }
 
   window.saveSettingsState();
@@ -1241,7 +1278,7 @@ window.renderSettingsServicesList = function() {
   const services = window.AppState.settings.services || [];
 
   container.innerHTML = services.map((srv, idx) => `
-    <div class="settings-service-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-900/70 p-2.5 rounded-xl border border-slate-700">
+    <div class="settings-service-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-900/70 p-2.5 rounded-xl border border-slate-700" data-service-id="${escapeHtml(srv.id || '')}">
       <div class="sm:col-span-4">
         <input type="text" class="srv-name-input w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white font-bold" value="${escapeHtml(srv.name)}" placeholder="اسم الخدمة العلاجية" />
       </div>
@@ -1259,9 +1296,13 @@ window.renderSettingsServicesList = function() {
 };
 
 window.addNewServiceRow = function() {
-  window.AppState.settings.services.push({
-    id: 'srv_' + Date.now(),
-    name: 'خدمة علاجية جديدة',
+  const services = window.AppState.settings.services || (window.AppState.settings.services = []);
+  let number = services.length + 1;
+  let name = 'خدمة علاجية جديدة ' + number;
+  while (services.some(srv => srv.name === name)) { number += 1; name = 'خدمة علاجية جديدة ' + number; }
+  services.push({
+    id: 'srv_manual_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    name,
     price: 5000,
     keywords: ['خدمة']
   });

@@ -17,6 +17,26 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 18000) {
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   finally { clearTimeout(timer); }
 }
+function syncAIKeysFromSettingsForm(allowClear = false) {
+  const ai = window.AppState?.settings?.ai;
+  if (!ai) return;
+  const fields = { geminiKey: 'cfg-gemini-key', groqKey: 'cfg-groq-key', openrouterKey: 'cfg-openrouter-key' };
+  let changed = false;
+  Object.entries(fields).forEach(([key, id]) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const value = input.value.trim();
+    if (value || allowClear) { if (ai[key] !== value) { ai[key] = value; changed = true; } }
+  });
+  if (changed) window.saveSettingsState?.();
+  return ai;
+}
+function inferAIProvider(modelId) {
+  const id = String(modelId || '');
+  if (/^gemini[-/]/i.test(id)) return 'gemini';
+  if (id.includes('/')) return 'openrouter';
+  return 'groq';
+}
 async function testOneModel(model, settings) {
   try {
     let res, data;
@@ -53,7 +73,7 @@ window.testAndDiscoverAllModels = async function() {
   }
   window.__docaiModelDiscoveryRunning = true;
   try {
-  const settings = window.AppState?.settings?.ai || {};
+  const settings = syncAIKeysFromSettingsForm(true) || window.AppState?.settings?.ai || {};
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
   if (window.showToast) window.showToast('جارٍ اكتشاف النماذج من المزودين ثم اختبار كل نموذج على حدة…', 'info');
@@ -124,7 +144,7 @@ window.testAndDiscoverAllModels = async function() {
 };
 
 window.callAI = async function(prompt, imageBase64 = null, options = {}) {
-  const settings = window.AppState?.settings?.ai || {};
+  const settings = syncAIKeysFromSettingsForm(false) || window.AppState?.settings?.ai || {};
   const userText = String(prompt || '').trim();
   if (!userText) throw new Error('يرجى كتابة الرسالة أولاً.');
   // التحيات والأسئلة العامة لا تحتاج إلى قراءة بيانات المرضى أو السجلات المالية.
@@ -137,17 +157,37 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
     contextIntent ? 'استخدم سياق العيادة المرفق فقط عند الإجابة عن بيانات العيادة.' : '',
     contextIntent ? 'سياق العيادة: ' + JSON.stringify(context) : ''
   ].filter(Boolean).join('\n');
-  const models = window.AI_MODELS_CATALOG || [];
+  const liveCatalog = Array.isArray(window.AI_MODELS_CATALOG) ? window.AI_MODELS_CATALOG : [];
+  const savedIds = Array.isArray(window.AppState?.verifiedModels) ? window.AppState.verifiedModels : [];
+  const restoredCatalog = savedIds.map(id => ({ id, provider: inferAIProvider(id), status: 'working', source: 'saved-verification' }));
+  const models = liveCatalog.length ? liveCatalog : restoredCatalog;
   const requested = options.modelId || settings.selectedMode || 'auto';
   let candidates = requested === 'auto' ? models.filter(m => m.status === 'working') : models.filter(m => m.id === requested);
-  if (requested !== 'auto' && candidates.length === 0) {
-    const provider = requested.startsWith('gemini') ? 'gemini' : (requested.includes('/') || requested.endsWith(':free') ? 'openrouter' : 'groq');
-    candidates = [{ id: requested, provider }];
+  if (requested === 'auto') candidates = candidates.filter(model => Boolean(settings[`${model.provider}Key`]));
+  if (requested !== 'auto' && candidates.length === 0) candidates = [{ id: requested, provider: inferAIProvider(requested) }];
+  if (requested === 'auto' && candidates.length === 0) {
+    if (settings.geminiKey) candidates.push({ id: 'gemini-2.5-flash', provider: 'gemini' });
+    if (settings.groqKey) candidates.push({ id: 'llama-3.3-70b-versatile', provider: 'groq' });
+    if (settings.openrouterKey) candidates.push({ id: 'meta-llama/llama-3.3-70b-instruct:free', provider: 'openrouter' });
   }
   if (requested === 'auto') {
     candidates.sort((a,b) => ({gemini:0,groq:1,openrouter:2}[a.provider] ?? 9) - ({gemini:0,groq:1,openrouter:2}[b.provider] ?? 9));
-    // لا تنتظر عشرات النماذج المتعطلة بالتتابع؛ جرّب أفضل ثلاثة مرشحين فقط.
-    candidates = candidates.slice(0, 3);
+    // Use one verified candidate per configured provider, then a bounded direct fallback.
+    // This avoids three stale Gemini IDs preventing a working Groq/OpenRouter fallback.
+    const defaults = [];
+    if (settings.geminiKey) defaults.push({ id: 'gemini-2.5-flash', provider: 'gemini' });
+    if (settings.groqKey) defaults.push({ id: 'llama-3.3-70b-versatile', provider: 'groq' });
+    if (settings.openrouterKey) defaults.push({ id: 'meta-llama/llama-3.3-70b-instruct:free', provider: 'openrouter' });
+    const pool = new Map();
+    for (const model of [...candidates, ...defaults]) {
+      if (!settings[`${model.provider}Key`]) continue;
+      const key = `${model.provider}:${model.id}`;
+      if (!pool.has(key)) pool.set(key, model);
+    }
+    candidates = ['gemini', 'groq', 'openrouter']
+      .map(provider => [...pool.values()].find(model => model.provider === provider))
+      .filter(Boolean)
+      .slice(0, 3);
   }
   let lastError;
   const timeoutMs = Math.max(5000, Math.min(Number(options.timeoutMs) || 10000, 20000));
