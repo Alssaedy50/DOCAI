@@ -362,7 +362,7 @@ window.updateReceiptQRCode = async function(customData = null) {
   unavailable.style.cssText = 'width:80px;height:80px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:#64748b;background:#fff';
   unavailable.textContent = 'QR library unavailable';
   qrContainer.appendChild(unavailable);
-  console.error('QRCode.js is not loaded; QR generation was not possible.');');
+  console.error('QRCode.js is not loaded; QR generation was not possible.');
 };
 
 /* ==================== 7. لوحة التوقيع الإلكتروني الحر (للمحاسب/الطبيب وللمستلم) ==================== */
