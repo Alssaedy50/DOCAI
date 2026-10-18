@@ -77,7 +77,6 @@
     button { touch-action: manipulation; }
     #receipt-capture-area { box-sizing: border-box; }
     #receipt-preview-wrapper { min-width: 0; }
-    #tab-section-ai-chat > div { min-height: 420px; }
     @media (max-width: 640px) {
       /* Keep the app shell within the viewport */
       header { gap: 8px; }
@@ -162,7 +161,6 @@
       #tab-section-records .flex.items-center.gap-2, #tab-section-inventory .flex.items-center.gap-2 { flex-wrap: wrap; }
       #tab-section-records .flex.items-center.gap-2 > *, #tab-section-inventory .flex.items-center.gap-2 > * { max-width: 100%; }
       #tab-section-finance #exp-title, #tab-section-finance #exp-amount { width: 100%; }
-      #tab-section-ai-chat > div { height: 72dvh; min-height: 420px; }
       #chat-user-input { min-width: 0; }
       #signature-modal > div, #live-voice-call-modal > div { max-height: calc(100dvh - 24px); overflow-y: auto; }
       #signature-pad-canvas { height: 150px; }
@@ -200,22 +198,25 @@
       }
     }
 
-    /* DOCAI refinement: full-height dedicated chat screen, readable text, and responsive receipt data */
-    .docai-chat-page { min-height: calc(100dvh - 112px); }
-    .docai-chat-shell { height: calc(100dvh - 128px); min-height: 520px; }
-    #chat-messages-container { color: #f1f5f9; font-size: 14px; line-height: 1.8; }
+    /* Dedicated DOCAI conversation: edge-to-edge on desktop and mobile, with no clinic navigation chrome. */
+    body.docai-chat-mode { height: 100dvh; min-height: 0; overflow: hidden; }
+    body.docai-chat-mode > header,
+    body.docai-chat-mode > #sidebar-backdrop,
+    body.docai-chat-mode > #sidebar-drawer { display: none !important; }
+    body.docai-chat-mode > main { width: 100% !important; max-width: none !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; flex: 1 1 auto; }
+    .docai-chat-page { position: fixed; inset: 0; z-index: 60; width: 100%; height: 100dvh; min-height: 0; margin: 0 !important; padding: 0 !important; background: #020617; overflow: hidden; }
+    .docai-chat-shell { width: 100%; height: 100%; min-height: 0; border: 0 !important; border-radius: 0 !important; }
+    .docai-chat-shell > :first-child { border-radius: 0 !important; }
+    #chat-messages-container { color: #f1f5f9; font-size: 14px; line-height: 1.8; min-height: 0; overscroll-behavior: contain; }
     #chat-messages-container .chat-body-content { color: #f1f5f9; line-height: 1.85; overflow-wrap: anywhere; }
     #chat-user-input { font-size: 14px !important; min-width: 0; }
+    #chat-user-input::placeholder { color: #94a3b8; }
+    body.docai-chat-mode #chat-attachment-preview:empty { display: none; }
     @media (max-width: 640px) {
-      .docai-chat-page { position: fixed; inset: 64px 0 0; z-index: 30; background: #020617; padding: 8px !important; overflow: auto; }
-      .docai-chat-shell { height: calc(100dvh - 80px); min-height: 0; border-radius: 16px; }
+      .docai-chat-shell { height: 100dvh; }
       #chat-messages-container { padding: 12px !important; }
       #chat-user-input { min-height: 44px; }
-      #records-table-body td, #inventory-table-body td { vertical-align: top; }
-      #records-table-body td[dir="ltr"] { white-space: nowrap; }
-      #inventory-table-body td:last-child > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
-      #inventory-table-body td:last-child button { justify-content: center; min-width: 0; padding: 8px 5px; font-size: 11px; }
-      #receipt-capture-area .receipt-header, #receipt-capture-area [data-receipt-header] { flex-wrap: nowrap; }
+      #tab-section-ai-chat .chat-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     }
     #live-voice-call-modal, [onclick*="toggleLiveVoiceCall"], [onclick*="startLiveVoiceCall"] { display: none !important; }
   </style>
@@ -872,22 +873,18 @@
     <section id="tab-section-ai-chat" class="hidden no-print docai-chat-page">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col docai-chat-shell">
 
-        <!-- رأس شاشة المحادثة -->
-        <div class="p-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 rounded-t-2xl">
-          <div>
-            <h2 class="text-sm font-black text-sky-400">🤖 المساعد الطبي والإداري الذكي (Smart Context RAG)</h2>
-            <p class="text-[11px] text-slate-400">متصل ببيانات السندات والديون والمخزون والمصروفات مع دعم الصور والملفات</p>
+        <!-- رأس المحادثة: رجوع، اسم المساعد، ومسح المحادثة فقط -->
+        <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center gap-3 bg-slate-950/95 shrink-0">
+          <button type="button" onclick="window.exitFullscreenChat()"
+            class="shrink-0 w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-lg"
+            aria-label="العودة إلى نظام العيادة" title="العودة إلى نظام العيادة">→</button>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-sm sm:text-base font-black text-white truncate">🤖 محادثة DOCAI</h2>
+            <p class="text-[11px] text-slate-400 truncate">المساعد الذكي • النص والصوت والملفات</p>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.testAndDiscoverAllModels()"
-              class="px-3 py-1.5 rounded-xl bg-sky-600/30 hover:bg-sky-600 border border-sky-400/40 text-xs font-extrabold text-white">
-              🔍 فحص النماذج المتاحة
-            </button>
-            <button type="button" onclick="window.clearChatHistoryUI()"
-              class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">
-              🧹 مسح المحادثة
-            </button>
-          </div>
+          <button type="button" onclick="window.clearChatHistoryUI()"
+            class="shrink-0 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200"
+            title="مسح الرسائل">🧹 <span class="hidden sm:inline">مسح</span></button>
         </div>
 
         <!-- صندوق الرسائل المنسق غير المتداخل -->
@@ -897,7 +894,7 @@
         <div id="chat-attachment-preview" class="hidden px-4 py-2 bg-slate-950/90 border-t border-slate-800"></div>
 
         <!-- شريط الإدخال وإرفاق الصور/الملفات والمايكروفون -->
-        <div class="p-3 bg-slate-950 border-t border-slate-800 rounded-b-2xl flex items-center gap-2">
+        <div class="chat-composer shrink-0 p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
           <label class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 cursor-pointer shrink-0" title="إرفاق صورة أشعة أو فاتورة أو ملف PDF/JSON/CSV">
             📎
             <input id="chat-file-input" type="file" accept="image/*,.pdf,.json,.csv,.txt"
