@@ -186,6 +186,17 @@ window.saveInventoryState = () => localStorage.setItem(STORAGE_KEYS.INVENTORY, J
 window.saveExpensesState = () => localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(window.AppState.expenses));
 window.saveVerifiedModelsState = () => localStorage.setItem(STORAGE_KEYS.VERIFIED_MODELS, JSON.stringify(window.AppState.verifiedModels));
 
+// Remove legacy persisted API keys once on startup. New keys can be entered for the current session.
+try {
+  if (window.AppState.settings.ai) {
+    window.AppState.settings.ai.geminiKey = '';
+    window.AppState.settings.ai.groqKey = '';
+    window.AppState.settings.ai.openrouterKey = '';
+  }
+  if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
+  window.saveSettingsState();
+} catch (error) { console.warn('Could not clear legacy persisted API keys:', error); }
+
 /* ==================== محرك التفقيط العربي ==================== */
 function convertUnderThousand(n) {
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
