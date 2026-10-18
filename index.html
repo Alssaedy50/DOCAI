@@ -17,7 +17,7 @@
   <!-- مكتبات التصدير: html2canvas + jsPDF + QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'}else if(this.dataset.fallback==='1'){this.dataset.fallback='2';this.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'}else{this.onerror=null;console.error('QR library failed to load')}"></script>
+  <script src="js/qrcode.min.js"></script>
 
   <style>
     :root {
@@ -999,6 +999,10 @@
             </div>
           </div>
 
+          <div class="mb-3 text-xs">
+            <label class="block text-slate-300 font-bold mb-1">نوع الخط</label>
+            <select id="cfg-font-family" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"><option value="Cairo">Cairo — عربي حديث</option><option value="Tajawal">Tajawal — واضح</option><option value="Arial">Arial — افتراضي</option><option value="Tahoma">Tahoma — كلاسيكي</option></select>
+          </div>
           <div class="grid grid-cols-3 gap-2 text-xs">
             <div>
               <label class="block text-slate-400 mb-1">اللون الأساسي</label>
