@@ -688,7 +688,7 @@ window.handleChatFileUpload = function(event) {
   if (!file) return;
 
   const fileName = file.name;
-  const mimeType = file.type || 'application/octet-stream';
+  const mimeType = file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : /\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : /\.jpe?g$/i.test(file.name) ? 'image/jpeg' : 'application/octet-stream');
 
   // 1. إذا كان الملف صورة (أشعة أسنان، فاتورة، سند يدوي)
   if (mimeType.startsWith('image/')) {

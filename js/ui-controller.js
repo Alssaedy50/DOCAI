@@ -60,10 +60,11 @@ function escapeHtml(str) {
 function formatMarkdownSimple(text) {
   const safe = escapeHtml(text);
   return safe
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-sky-300 font-extrabold">$1</strong>')
-    .replace(/^### (.*$)/gm, '<h4 class="text-base font-extrabold text-amber-300 mt-2 mb-1">$1</h4>')
-    .replace(/^## (.*$)/gm, '<h3 class="text-lg font-extrabold text-sky-300 mt-3 mb-1">$1</h3>')
-    .replace(/^- (.*$)/gm, '<div class="flex items-start gap-2 my-0.5"><span class="text-sky-400 font-bold">•</span><span>$1</span></div>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-sky-200 font-extrabold">$1</strong>')
+    .replace(/^### (.*$)/gm, '<h4 class="text-base font-extrabold text-amber-200 mt-2 mb-1">$1</h4>')
+    .replace(/^## (.*$)/gm, '<h3 class="text-lg font-extrabold text-sky-200 mt-3 mb-1">$1</h3>')
+    .replace(/^(?:[-*])\s+(.*$)/gm, '<div class="flex items-start gap-2 my-1"><span class="text-sky-300 font-bold">•</span><span class="text-slate-100">$1</span></div>')
+    .replace(/^(\d+[.)])\s+(.*$)/gm, '<div class="flex items-start gap-2 my-1"><span class="text-sky-300 font-bold">$1</span><span class="text-slate-100">$2</span></div>')
     .replace(/\n/g, '<br>');
 }
 
@@ -168,13 +169,15 @@ window.applyIdentityAndThemeToDOM = function() {
   setText('preview-phones', id.phones);
 
   // تحديث الشعار والعلامة المائية
-  const logoUrl = app.customLogoDataUrl || 'https://cdn-icons-png.flaticon.com/512/2818/2818366.png';
+  const logoUrl = app.customLogoDataUrl || window.DEFAULT_CLINIC_LOGO_DATA_URI || '';
   document.querySelectorAll('.clinic-logo-img').forEach(img => {
+    img.onerror = function() { if (window.DEFAULT_CLINIC_LOGO_DATA_URI && this.src !== window.DEFAULT_CLINIC_LOGO_DATA_URI) { this.onerror = null; this.src = window.DEFAULT_CLINIC_LOGO_DATA_URI; } };
     img.src = logoUrl;
   });
 
   const watermarkImg = document.getElementById('preview-watermark-img');
   if (watermarkImg) {
+    watermarkImg.onerror = function() { if (window.DEFAULT_CLINIC_LOGO_DATA_URI && this.src !== window.DEFAULT_CLINIC_LOGO_DATA_URI) { this.onerror = null; this.src = window.DEFAULT_CLINIC_LOGO_DATA_URI; } };
     watermarkImg.src = logoUrl;
     const opacityVal = (Number(app.watermarkOpacity) || 6) / 100;
     watermarkImg.style.opacity = String(opacityVal);
@@ -436,6 +439,8 @@ window.saveCurrentReceiptFromUI = function() {
     paymentMethod: document.getElementById('rec-payment-method')?.value || 'نقداً (Cash)',
     notes: document.getElementById('rec-notes')?.value?.trim() || '',
     amountWords: window.numberToArabicWords(paidAmount, currency),
+    accountantSig: window.AppState.currentAccountantSig || '',
+    receiverSig: window.AppState.currentReceiverSig || '',
     paperFormat: document.getElementById('pdf-paper-size-select')?.value || 'a5'
   };
 
@@ -604,12 +609,12 @@ window.renderRecordsTable = function() {
 
     return `
       <tr class="border-b border-slate-800 hover:bg-slate-800/60 transition-colors text-xs">
-        <td class="py-3 px-3 font-extrabold text-sky-400">#${escapeHtml(r.receiptNo)}</td>
-        <td class="py-3 px-3 text-slate-300">${escapeHtml(r.date)}</td>
-        <td class="py-3 px-3 font-bold text-white">${escapeHtml(r.patientName)}</td>
+        <td class="py-3 px-3 font-extrabold text-sky-300" dir="ltr"><span class="whitespace-nowrap">#${escapeHtml(r.receiptNo)}</span></td>
+        <td class="py-3 px-3 text-slate-200" dir="ltr"><span class="whitespace-nowrap">${escapeHtml(r.date)}</span></td>
+        <td class="py-3 px-3 font-bold text-white"><button type="button" onclick="window.editReceiptRecord('${r.id}')" class="text-sky-200 hover:text-white underline-offset-4 hover:underline">${escapeHtml(r.patientName)}</button></td>
         <td class="py-3 px-3 text-slate-300" dir="ltr">${escapeHtml(r.patientPhone || '—')}</td>
         <td class="py-3 px-3 text-slate-200">${escapeHtml((r.services || []).join(' + ') || 'خدمات عامة')}</td>
-        <td class="py-3 px-3 font-bold text-emerald-300">${(Number(r.paidAmount) || 0).toLocaleString()} / ${(Number(r.totalAmount) || 0).toLocaleString()}</td>
+        <td class="py-3 px-3 text-slate-100"><div class="flex flex-col gap-1 whitespace-nowrap"><span><span class="text-slate-400">المقبوض:</span> <b class="text-emerald-300" dir="ltr">${(Number(r.paidAmount) || 0).toLocaleString()}</b></span><span><span class="text-slate-400">الإجمالي:</span> <b class="text-sky-200" dir="ltr">${(Number(r.totalAmount) || 0).toLocaleString()}</b></span></div></td>
         <td class="py-3 px-3">${statusBadge}</td>
         <td class="py-3 px-3">
           <div class="flex items-center gap-1.5 flex-wrap">
@@ -648,6 +653,8 @@ window.editReceiptRecord = function(id) {
   setVal('rec-notes', rec.notes || '');
   const paperFormat = document.getElementById('pdf-paper-size-select');
   if (paperFormat) paperFormat.value = rec.paperFormat || 'a5';
+  window.AppState.currentAccountantSig = rec.accountantSig || '';
+  window.AppState.currentReceiverSig = rec.receiverSig || '';
 
   window.switchMainTab('receipt');
   window.renderServiceChips();
@@ -792,9 +799,7 @@ window.renderInventoryTable = function() {
           <div class="font-extrabold text-white text-sm">${escapeHtml(item.name)}</div>
           <div class="text-slate-400 text-[11px]">${escapeHtml(item.notes || item.linkedService || 'مادة طبية عامة')}</div>
         </td>
-        <td class="py-3.5 px-3 font-extrabold text-base text-sky-300">
-          ${item.qty} <span class="text-xs text-amber-300 font-bold">${escapeHtml(item.unit || 'عدد')}</span>
-        </td>
+        <td class="py-3.5 px-3 font-extrabold text-base text-sky-200 whitespace-nowrap" dir="auto">${escapeHtml(String(item.qty))} ${escapeHtml(item.unit || 'عدد')}</td>
         <td class="py-3.5 px-3 text-slate-300">${item.minQty} ${escapeHtml(item.unit || 'عدد')}</td>
         <td class="py-3.5 px-3 font-bold text-slate-200">${(Number(item.unitPrice) || 0).toLocaleString()}</td>
         <td class="py-3.5 px-3 font-extrabold text-emerald-300">${totalVal.toLocaleString()}</td>

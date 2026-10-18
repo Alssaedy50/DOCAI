@@ -4,6 +4,8 @@
    File: js/core-db.js
    ========================================================================== */
 
+window.DEFAULT_CLINIC_LOGO_DATA_URI = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E';
+
 const STORAGE_KEYS = {
   SETTINGS: 'docai_gemini_settings_v3',
   RECEIPTS: 'docai_gemini_receipts_v3',
@@ -41,7 +43,7 @@ const DEFAULT_SETTINGS = {
     customPrimaryColor: '#0B2545',
     customSecondaryColor: '#1d6fa5',
     customAccentColor: '#00A8E8',
-    customLogoDataUrl: 'https://cdn-icons-png.flaticon.com/512/2818/2818366.png',
+    customLogoDataUrl: window.DEFAULT_CLINIC_LOGO_DATA_URI,
     watermarkOpacity: 6,
     permanentAccountantSig: ''
   },
@@ -201,8 +203,8 @@ window.numberToArabicWords = function(amount, currency) {
   const tho = Math.floor((num % 1000000) / 1000);
   const rem = num % 1000;
   const segs = [];
-  if (mil > 0) segs.push(mil === 1 ? 'مليون' : mil === 2 ? 'مليونان' : `${convertUnderThousand(mil)} مليون`);
-  if (tho > 0) segs.push(tho === 1 ? 'ألف' : tho === 2 ? 'ألفان' : `${convertUnderThousand(tho)} ألف`);
+  if (mil > 0) segs.push(mil === 1 ? 'مليون' : mil === 2 ? 'مليونان' : mil >= 3 && mil <= 10 ? `${convertUnderThousand(mil)} ملايين` : `${convertUnderThousand(mil)} مليونًا`);
+  if (tho > 0) segs.push(tho === 1 ? 'ألف' : tho === 2 ? 'ألفان' : tho >= 3 && tho <= 10 ? `${convertUnderThousand(tho)} آلاف` : `${convertUnderThousand(tho)} ألفًا`);
   if (rem > 0) segs.push(convertUnderThousand(rem));
   return `فقط ${segs.join(' و')} ${curr} لا غير`;
 };
