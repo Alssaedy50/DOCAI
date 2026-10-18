@@ -344,12 +344,15 @@ window.speakText = async function(text, forceEngine = null) {
 };
 
 async function speakWithServerGroqTTS(text, isCurrentRequest = () => true) {
-  const spokenText = String(text || '').trim().slice(0, 200);
-  if (!spokenText) return false;
+  const spokenText = String(text || '').trim();
+  // The provider endpoint intentionally limits each utterance; do not silently truncate longer answers.
+  if (!spokenText || spokenText.length > 200) return false;
   let audioUrl = null;
+  let audio = null;
+  let finishPlayback = null;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 9000);
+    const timer = setTimeout(() => controller.abort(), 8000);
     let response;
     try {
       response = await fetch('/api/tts', {
@@ -364,31 +367,29 @@ async function speakWithServerGroqTTS(text, isCurrentRequest = () => true) {
     const blob = await response.blob();
     if (!blob.size || !isCurrentRequest()) return false;
     audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
+    audio = new Audio(audioUrl);
     window.VoiceVisionState.isSpeaking = true;
     updateSpeakingIndicatorUI(true, 'ai_cloud');
     const played = await new Promise(resolve => {
-      audio.onended = () => resolve(true);
-      audio.onerror = () => resolve(false);
-      audio.play().then(() => {}).catch(() => resolve(false));
+      let settled = false;
+      finishPlayback = value => { if (settled) return; settled = true; resolve(value); };
+      audio.onended = () => finishPlayback(true);
+      audio.onerror = () => finishPlayback(false);
+      window.VoiceVisionState.currentAudioObj = {
+        stop: () => { try { audio.pause(); audio.currentTime = 0; } catch (e) {} finishPlayback(false); }
+      };
+      audio.play().catch(() => finishPlayback(false));
     });
-    if (window.VoiceVisionState.currentAudioObj) {
-      try { window.VoiceVisionState.currentAudioObj.stop(); } catch (e) {}
-    }
-    window.VoiceVisionState.currentAudioObj = {
-      stop: () => { try { audio.pause(); audio.currentTime = 0; } catch (e) {} }
-    };
-    if (!isCurrentRequest()) { audio.pause(); return false; }
-    if (played) {
-      window.VoiceVisionState.isSpeaking = false;
-      updateSpeakingIndicatorUI(false);
-      return true;
-    }
-    return false;
+    if (!isCurrentRequest()) return false;
+    return played;
   } catch (error) {
     return false;
   } finally {
-    if (audioUrl && !window.VoiceVisionState.isSpeaking) URL.revokeObjectURL(audioUrl);
+    if (audio) { audio.onended = null; audio.onerror = null; try { audio.pause(); } catch (e) {} }
+    if (window.VoiceVisionState.currentAudioObj) window.VoiceVisionState.currentAudioObj = null;
+    window.VoiceVisionState.isSpeaking = false;
+    updateSpeakingIndicatorUI(false);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
   }
 }
 
