@@ -92,6 +92,32 @@ window.testAndDiscoverAllModels = async function() {
   window.__docaiModelDiscoveryRunning = true;
   try {
   const settings = syncAIKeysFromSettingsForm(true) || window.AppState?.settings?.ai || {};
+  const hasLocalKeys = Boolean(settings.geminiKey || settings.groqKey || settings.openrouterKey);
+  if (!hasLocalKeys) {
+    if (window.showToast) window.showToast('جارٍ اكتشاف واختبار النماذج من مفاتيح الخادم الآمنة…', 'info');
+    try {
+      const response = await fetchWithTimeout('/api/models', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store', body: JSON.stringify({ mode: 'discover-and-test' })
+      }, 60000);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || ('HTTP ' + response.status));
+      const verified = Array.isArray(data.models) ? data.models.filter(m => m.status === 'working') : [];
+      window.AI_MODELS_CATALOG = verified;
+      window.AppState.verifiedModels = verified.map(m => m.id);
+      window.saveSettingsState?.();
+      window.updateModelSelectDropdown?.();
+      window.renderModelsTable?.();
+      if (window.showToast) window.showToast(verified.length
+        ? 'اكتمل فحص الخادم: ' + verified.length + ' نموذجًا اجتاز الاختبار.'
+        : 'لم يجتز أي نموذج الاختبار. تحقق من مفاتيح المزودين والحصص في Vercel.', verified.length ? 'success' : 'warning');
+      return verified;
+    } catch (error) {
+      if (window.showToast) window.showToast('تعذر فحص نماذج الخادم: ' + (error.message || 'خطأ اتصال'), 'warning');
+      return [];
+    }
+  }
+
   const discovered = [];
   const statuses = { gemini: 'لم يُفحص', groq: 'لم يُفحص', openrouter: 'لم يُفحص' };
   if (window.showToast) window.showToast('جارٍ اكتشاف النماذج من المزودين ثم اختبار كل نموذج على حدة…', 'info');
