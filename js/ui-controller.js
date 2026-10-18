@@ -817,7 +817,7 @@ window.renderInventoryTable = function() {
     return `
       <tr class="border-b border-slate-800 hover:bg-slate-800/60 transition-colors text-xs">
         <td class="py-3.5 px-3">
-          <div class="font-extrabold text-white text-sm">${escapeHtml(item.name)}</div>
+          <button type="button" data-id="${item.id}" onclick="window.editInventoryItemUI(this.dataset.id)" class="font-extrabold text-white text-sm text-right hover:text-sky-200 hover:underline underline-offset-4">${escapeHtml(item.name)}</button>
           <div class="text-slate-400 text-[11px]">${escapeHtml(item.notes || item.linkedService || 'مادة طبية عامة')}</div>
         </td>
         <td class="py-3.5 px-3 font-extrabold text-base text-sky-200 whitespace-nowrap" dir="auto">${escapeHtml(String(item.qty))} ${escapeHtml(item.unit || 'عدد')}</td>
