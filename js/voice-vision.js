@@ -322,17 +322,18 @@ window.speakText = async function(text, forceEngine = null) {
   const chosenEngine = forceEngine || tts;
   const geminiKey = window.AppState?.settings?.ai?.geminiKey;
 
-  if (chosenEngine === 'ai_cloud' && geminiKey) {
-    const success = await speakWithGeminiCloudTTS(cleanText, geminiKey, isCurrentRequest);
+  if (chosenEngine === 'ai_cloud') {
+    // Prefer server-side Groq TTS when configured, without exposing the server key to the browser.
+    const serverTTS = await speakWithServerGroqTTS(cleanText, isCurrentRequest);
     if (!isCurrentRequest()) return;
-    if (success) return;
+    if (serverTTS) return;
 
-    // A cloud TTS failure must never leave the user with silent playback.
-    if (window.showToast) {
-      window.showToast('تعذر الصوت السحابي؛ سيتم استخدام صوت الهاتف العربي المتاح.', 'info');
+    if (geminiKey) {
+      const success = await speakWithGeminiCloudTTS(cleanText, geminiKey, isCurrentRequest);
+      if (!isCurrentRequest()) return;
+      if (success) return;
     }
-  } else if (chosenEngine === 'ai_cloud' && !geminiKey && window.showToast) {
-    window.showToast('لا يوجد مفتاح Gemini للنطق السحابي؛ سيتم استخدام صوت الهاتف.', 'info');
+    if (window.showToast) window.showToast('تعذر الصوت السحابي؛ سيتم استخدام صوت الهاتف العربي المتاح.', 'info');
   }
 
   // Use the phone's speech synthesis as the primary or fallback voice engine.
@@ -341,6 +342,55 @@ window.speakText = async function(text, forceEngine = null) {
     window.showToast('تعذر تشغيل النطق الصوتي. تحقق من دعم المتصفح للأصوات العربية.', 'warning');
   }
 };
+
+async function speakWithServerGroqTTS(text, isCurrentRequest = () => true) {
+  const spokenText = String(text || '').trim().slice(0, 200);
+  if (!spokenText) return false;
+  let audioUrl = null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    let response;
+    try {
+      response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ text: spokenText }),
+        signal: controller.signal
+      });
+    } finally { clearTimeout(timer); }
+    if (!response.ok) return false;
+    const blob = await response.blob();
+    if (!blob.size || !isCurrentRequest()) return false;
+    audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    window.VoiceVisionState.isSpeaking = true;
+    updateSpeakingIndicatorUI(true, 'ai_cloud');
+    const played = await new Promise(resolve => {
+      audio.onended = () => resolve(true);
+      audio.onerror = () => resolve(false);
+      audio.play().then(() => {}).catch(() => resolve(false));
+    });
+    if (window.VoiceVisionState.currentAudioObj) {
+      try { window.VoiceVisionState.currentAudioObj.stop(); } catch (e) {}
+    }
+    window.VoiceVisionState.currentAudioObj = {
+      stop: () => { try { audio.pause(); audio.currentTime = 0; } catch (e) {} }
+    };
+    if (!isCurrentRequest()) { audio.pause(); return false; }
+    if (played) {
+      window.VoiceVisionState.isSpeaking = false;
+      updateSpeakingIndicatorUI(false);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    return false;
+  } finally {
+    if (audioUrl && !window.VoiceVisionState.isSpeaking) URL.revokeObjectURL(audioUrl);
+  }
+}
 
 async function speakWithGeminiCloudTTS(text, apiKey, isCurrentRequest = () => true) {
   try {
@@ -729,7 +779,58 @@ window.handleChatFileUpload = function(event) {
     return;
   }
 
-  // 3. إذا كان ملف PDF (يُحول إلى Base64 ليدعمه Gemini 2.5 مباشرة)
+  // 3. دعم مستندات Word وجداول Excel باستخراج النص محلياً قبل إرسالها للمساعد.
+  const extension = (fileName.split('.').pop() || '').toLowerCase();
+  if (extension === 'docx' || extension === 'xlsx' || extension === 'xls') {
+    if (file.size > 8 * 1024 * 1024) {
+      if (window.showToast) window.showToast('حجم الملف يتجاوز 8 ميغابايت. يرجى تصغيره ثم المحاولة.', 'warning');
+      event.target.value = '';
+      return;
+    }
+    const readDocument = async () => {
+      const buffer = await file.arrayBuffer();
+      let extractedText = '';
+      if (extension === 'docx') {
+        if (!window.mammoth) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.9.0/mammoth.browser.min.js';
+            script.onload = () => window.mammoth ? resolve() : reject(new Error('تعذر تحميل قارئ Word'));
+            script.onerror = () => reject(new Error('تعذر تحميل قارئ Word'));
+            document.head.appendChild(script);
+          });
+        }
+        const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+        extractedText = result.value || '';
+      } else {
+        if (!window.XLSX) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            script.onload = () => window.XLSX ? resolve() : reject(new Error('تعذر تحميل قارئ Excel'));
+            script.onerror = () => reject(new Error('تعذر تحميل قارئ Excel'));
+            document.head.appendChild(script);
+          });
+        }
+        const workbook = window.XLSX.read(buffer, { type: 'array' });
+        extractedText = workbook.SheetNames.slice(0, 8).map(name =>
+          'ورقة: ' + name + '\\n' + window.XLSX.utils.sheet_to_csv(workbook.Sheets[name]).slice(0, 6000)
+        ).join('\\n\\n');
+      }
+      window.VoiceVisionState.attachment = {
+        hasAttachment: true, fileName, fileType: 'text', mimeType,
+        base64Data: null, extractedText: String(extractedText).slice(0, 16000)
+      };
+      renderChatAttachmentPreviewUI();
+      if (window.showToast) window.showToast('📄 تم استخراج محتوى الملف (' + fileName + ') وإرفاقه للتحليل.', 'success');
+    };
+    readDocument().catch(error => {
+      if (window.showToast) window.showToast('تعذر قراءة الملف: ' + error.message, 'warning');
+    }).finally(() => { if (event.target) event.target.value = ''; });
+    return;
+  }
+
+  // 4. إذا كان ملف PDF (يُحول إلى Base64 ليدعمه Gemini 2.5 مباشرة)
   const reader = new FileReader();
   reader.onload = (e) => {
     window.VoiceVisionState.attachment = {
