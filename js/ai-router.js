@@ -9,7 +9,25 @@ function aiModelLabel(id, provider) {
 }
 function aiResponseText(data, provider) {
   if (provider === 'gemini') return data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
-  return data?.choices?.[0]?.message?.content || '';
+  const content = data?.choices?.[0]?.message?.content || '';
+  return Array.isArray(content) ? content.map(part => part?.text || '').join('') : String(content || '');
+}
+
+function docaiIsGreetingOnly(text) {
+  const normalized = String(text || '').toLocaleLowerCase('ar').replace(/[،,!.؟?؛;:ـ…]/g, ' ').replace(/[\u064B-\u065F\u0670]/g, '').replace(/\s+/g, ' ').trim();
+  if (!normalized || normalized.length > 90) return false;
+  return /^(?:(?:السلام عليكم(?: ورحمة الله وبركاته)?|وعليكم السلام|مرحبا|مرحباً|اهلا|أهلا|اهلين|أهلين|هلا|هلا والله|يا هلا|يا هلا والله|صباح الخير|مساء الخير|هاي|hello|hi|hey|good morning|good evening)(?: يا دكتور| دكتور| يا دكتورة| دكتورة| يا صديقي| بك| وسهلا| وسهلًا| ورحمة الله)?\s*)+$/i.test(normalized);
+}
+
+function docaiCleanModelReply(value) {
+  let text = String(value || '').trim();
+  if (!text) return text;
+  if (/^(?:\*\s*)?(?:role|language|style|constraint|user input|the user said|the system should respond)\s*:/i.test(text) || /\n\s*(?:\*\s*)?(?:user input|the user said|the system should respond)\s*:/i.test(text)) {
+    const quoted = [...text.matchAll(/[\"“]([^\"”\n]{3,180}[\u0600-\u06FF][^\"”\n]{0,180})[\"”]/g)].map(m => m[1].trim());
+    if (quoted.length) text = quoted[quoted.length - 1];
+    else text = text.split(/\n+/).filter(line => !/^\s*(?:\*\s*)?(?:role|language|style|constraint|user input|the user said|the system should respond)\s*:/i.test(line)).join('\n').trim();
+  }
+  return text;
 }
 async function fetchWithTimeout(url, options = {}, timeoutMs = 18000) {
   const controller = new AbortController();
@@ -147,6 +165,8 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   const settings = syncAIKeysFromSettingsForm(false) || window.AppState?.settings?.ai || {};
   const userText = String(prompt || '').trim();
   if (!userText) throw new Error('يرجى كتابة الرسالة أولاً.');
+  // Standalone greetings are answered locally to avoid latency and prompt leakage.
+  if (!imageBase64 && docaiIsGreetingOnly(userText)) return 'أهلًا وسهلًا دكتور! 😊 كيف أقدر أساعدك اليوم؟';
   // التحيات والأسئلة العامة لا تحتاج إلى قراءة بيانات المرضى أو السجلات المالية.
   const contextIntent = /مريض|مرضى|اسم المريض|رقم الهاتف|هاتف|جوال|سند|سندات|إيراد|ايراد|دخل|قبض|ديون|دين|متبقي|ذمم|مخزون|مواد|مادة|كمية|مصروف|مصاريف|نفقات|تكلفة|تكاليف|ربح|أرباح|خسارة|مالي|تقرير|حساب|رصيد|خدمات|أسعار|اسعار|موعد|مواعيد|today|patient|receipt|inventory|expense|debt|revenue|profit|financial|clinic records/i.test(userText);
   const context = contextIntent && window.ClinicDB ? window.ClinicDB.getSmartContextForQuery(userText) : {};
@@ -203,21 +223,21 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
 };
 
 async function callGeminiAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
-  const parts = [{ text: `${systemPrompt}\n\nطلب المستخدم: ${userPrompt}` }];
+  const parts = [{ text: userPrompt }];
   if (imageBase64) { const b64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64; parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } }); }
-  const res = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{parts}], generationConfig:{temperature:0.3} }) }, timeoutMs);
+  const res = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents:[{ role:'user', parts }], generationConfig:{temperature:0.2, maxOutputTokens:2048} }) }, timeoutMs);
   const data = await res.json().catch(()=>({})); if (!res.ok) throw new Error(data?.error?.message || `Gemini HTTP ${res.status}`);
-  const text = aiResponseText(data, 'gemini'); if (!text) throw new Error('أعاد Gemini استجابة فارغة'); return text;
+  const text = docaiCleanModelReply(aiResponseText(data, 'gemini')); if (!text) throw new Error('أعاد Gemini استجابة فارغة'); return text;
 }
 async function callGroqAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
   const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`}, body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3}) }, timeoutMs);
-  const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`Groq HTTP ${res.status}`); const text=aiResponseText(data,'groq'); if(!text) throw new Error('أعاد Groq استجابة فارغة'); return text;
+  const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`Groq HTTP ${res.status}`); const text=docaiCleanModelReply(aiResponseText(data,'groq')); if(!text) throw new Error('أعاد Groq استجابة فارغة'); return text;
 }
 async function callOpenRouterAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
   const res=await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`,'HTTP-Referer':location.origin,'X-Title':'DOCAI-GEMINI ERP'},body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3})},timeoutMs);
-  const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`OpenRouter HTTP ${res.status}`); const text=aiResponseText(data,'openrouter'); if(!text) throw new Error('أعاد OpenRouter استجابة فارغة'); return text;
+  const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`OpenRouter HTTP ${res.status}`); const text=docaiCleanModelReply(aiResponseText(data,'openrouter')); if(!text) throw new Error('أعاد OpenRouter استجابة فارغة'); return text;
 }
 
 window.parseReceiptWithSmartAI = async function(textInput) {
