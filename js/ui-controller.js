@@ -68,6 +68,32 @@ function formatMarkdownSimple(text) {
     .replace(/\n/g, '<br>');
 }
 
+/* ==================== حوار مخصص موحد ==================== */
+window.showCustomDialog = function(options = {}) {
+  const cfg = typeof options === 'string' ? { message: options } : options;
+  const type = cfg.type || 'confirm';
+  const title = cfg.title || (type === 'prompt' ? 'إدخال قيمة' : type === 'alert' ? 'تنبيه' : 'تأكيد الإجراء');
+  const message = cfg.message || '';
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4';
+    overlay.innerHTML = '<section role="dialog" aria-modal="true" aria-label="' + escapeHtml(title) + '" class="w-full max-w-md rounded-2xl border border-sky-500/40 bg-slate-900 p-5 shadow-2xl text-white" dir="rtl">' +
+      '<h3 class="text-lg font-black text-sky-200 mb-2">' + escapeHtml(title) + '</h3>' +
+      '<p class="text-sm leading-7 text-slate-200 whitespace-pre-line mb-4">' + escapeHtml(message) + '</p>' +
+      (type === 'prompt' ? '<input id="docai-dialog-input" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white outline-none focus:border-sky-400 mb-4" inputmode="decimal" value="' + escapeHtml(cfg.defaultValue ?? '') + '" />' : '') +
+      '<div class="flex gap-2 justify-end">' + (type === 'alert' ? '' : '<button type="button" data-dialog-cancel class="rounded-xl border border-slate-600 px-4 py-2 font-bold text-slate-200">إلغاء</button>') +
+      '<button type="button" data-dialog-ok class="rounded-xl bg-sky-600 hover:bg-sky-500 px-5 py-2 font-extrabold text-white">' + (type === 'alert' ? 'حسنًا' : 'تأكيد') + '</button></div></section>';
+    const isPrompt = type === 'prompt';
+    const finish = value => { overlay.remove(); resolve(value); };
+    overlay.querySelector('[data-dialog-cancel]')?.addEventListener('click', () => finish(isPrompt ? null : false));
+    overlay.querySelector('[data-dialog-ok]')?.addEventListener('click', () => finish(isPrompt ? overlay.querySelector('#docai-dialog-input').value : true));
+    overlay.addEventListener('click', e => { if (e.target === overlay) finish(isPrompt ? null : false); });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') finish(isPrompt ? null : false); if (e.key === 'Enter' && isPrompt) finish(overlay.querySelector('#docai-dialog-input').value); });
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#docai-dialog-input');
+    if (input) { input.focus(); input.select(); } else overlay.querySelector('[data-dialog-ok]')?.focus();
+  });
+};
 /* ==================== 2. القائمة الجانبية المنبثقة (Slide-out Sidebar Drawer) والتنقل ==================== */
 
 window.toggleSidebarDrawer = function(forceOpen = null) {
@@ -152,6 +178,9 @@ window.applyIdentityAndThemeToDOM = function() {
   document.documentElement.style.setProperty('--clinic-primary', primary);
   document.documentElement.style.setProperty('--clinic-secondary', secondary);
   document.documentElement.style.setProperty('--clinic-accent', accent);
+  const fontFamily = ['Cairo', 'Tajawal', 'Arial', 'Tahoma'].includes(app.fontFamily) ? app.fontFamily : 'Cairo';
+  document.documentElement.style.setProperty('--clinic-font-family', '"' + fontFamily + '", sans-serif');
+  document.body.style.fontFamily = '"' + fontFamily + '", sans-serif';
 
   // تحديث عنوان الصفحة والهيدر العلوي
   document.title = `${id.systemTitleAr || 'نظام العيادة'} - DOCAI ERP`;
@@ -662,29 +691,21 @@ window.editReceiptRecord = function(id) {
   window.showToast(`تم تحميل السند رقم #${rec.receiptNo} في شاشة المعاينة والتعديل`, 'info');
 };
 
-window.promptSettleDebtUI = function(id) {
-  const rec = (window.AppState.receipts || []).find(r => r.id === id);
-  if (!rec) return;
+window.promptSettleDebtUI = async function(id) {
+  const rec = (window.AppState.receipts || []).find(r => r.id === id); if (!rec) return;
   const rem = Number(rec.remainingAmount) || 0;
-  const input = prompt(`تسديد دين للمريض: ${rec.patientName}\nالمبلغ المتبقي الحالي: ${rem.toLocaleString()}\nأدخل المبلغ المدفوع الآن:`, String(rem));
+  const input = await window.showCustomDialog({ type: 'prompt', title: 'تسديد دين المريض', message: 'المريض: ' + rec.patientName + '\nالمبلغ المتبقي: ' + rem.toLocaleString() + '\nأدخل المبلغ المدفوع الآن:', defaultValue: String(rem) });
   if (input === null) return;
   const amount = Number(input);
-  if (isNaN(amount) || amount <= 0) {
-    window.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'warning');
-    return;
-  }
-
-  window.ClinicDB.settleReceiptDebt(id, amount);
-  window.renderRecordsTable();
-  window.renderFinanceAndExpenses();
-  window.showToast(`تم تسديد ${amount.toLocaleString()} من دين المريض (${rec.patientName}) بنجاح!`, 'success');
+  if (!Number.isFinite(amount) || amount <= 0) { window.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'warning'); return; }
+  window.ClinicDB.settleReceiptDebt(id, amount); window.renderRecordsTable(); window.renderFinanceAndExpenses();
+  window.showToast('تم تسديد ' + amount.toLocaleString() + ' من دين المريض (' + rec.patientName + ') بنجاح!', 'success');
 };
 
-window.deleteReceiptRecordUI = function(id) {
-  if (!confirm('هل أنت متأكد من حذف هذا السند نهائياً؟')) return;
-  window.ClinicDB.deleteReceipt(id);
-  window.renderRecordsTable();
-  window.renderFinanceAndExpenses();
+window.deleteReceiptRecordUI = async function(id) {
+  if (!await window.showCustomDialog({ type: 'confirm', title: 'حذف السند', message: 'هل أنت متأكد من حذف هذا السند نهائيًا؟' })) return;
+  const rec = (window.AppState.receipts || []).find(r => r.id === id); if (!rec) return;
+  window.ClinicDB.deleteReceipt(id); window.renderRecordsTable(); window.renderFinanceAndExpenses();
   window.showToast('تم حذف السند بنجاح', 'info');
 };
 
@@ -830,41 +851,26 @@ window.renderInventoryTable = function() {
   }).join('');
 };
 
-window.quickConsumeInventoryUI = function(id) {
-  const item = (window.AppState.inventory || []).find(i => i.id === id);
-  if (!item) return;
-  const val = prompt(`➖ استهلاك من: ${item.name}\nالكمية المتوفرة حالياً: ${item.qty} ${item.unit || 'عدد'}\nأدخل الكمية المستهلكة (يدعم الكسور مثل 0.5 أو 1):`, '1');
-  if (val === null) return;
-  const amount = Number(val);
-  if (isNaN(amount) || amount <= 0) {
-    window.showToast('يرجى إدخال كمية استهلاك صحيحة أكبر من الصفر', 'warning');
-    return;
-  }
-
-  const updated = window.ClinicDB.consumeInventoryItem(id, amount);
-  window.renderInventoryTable();
-  window.showToast(`تم خصم ${amount} ${updated.unit} من (${updated.name}). المتبقي: ${updated.qty} ${updated.unit}`, 'info');
+window.quickConsumeInventoryUI = async function(id) {
+  const item = (window.AppState.inventory || []).find(i => i.id === id); if (!item) return;
+  const val = await window.showCustomDialog({ type: 'prompt', title: 'استهلاك مادة من المخزون', message: 'المادة: ' + item.name + '\nالمتوفر: ' + item.qty + ' ' + (item.unit || 'عدد') + '\nأدخل الكمية المستهلكة:', defaultValue: '1' });
+  if (val === null) return; const amount = Number(val);
+  if (!Number.isFinite(amount) || amount <= 0) { window.showToast('يرجى إدخال كمية استهلاك صحيحة أكبر من الصفر', 'warning'); return; }
+  const updated = window.ClinicDB.consumeInventoryItem(id, amount); window.renderInventoryTable();
+  window.showToast('تم خصم ' + amount + ' ' + updated.unit + ' من (' + updated.name + '). المتبقي: ' + updated.qty + ' ' + updated.unit, 'info');
 };
 
-window.quickRestockInventoryUI = function(id) {
-  const item = (window.AppState.inventory || []).find(i => i.id === id);
-  if (!item) return;
-  const val = prompt(`➕ تزويد مخزون: ${item.name}\nالكمية الحالية: ${item.qty} ${item.unit || 'عدد'}\nأدخل الكمية المضافة الجديدة:`, '5');
-  if (val === null) return;
-  const addQty = Number(val);
-  if (isNaN(addQty) || addQty <= 0) {
-    window.showToast('يرجى إدخال كمية صحيحة أكبر من الصفر', 'warning');
-    return;
-  }
-
-  const priceInput = prompt(`سعر الوحدة الحالي هو (${item.unitPrice || 0}).\nأدخل سعر الوحدة الجديد أو اتركه كما هو:`, String(item.unitPrice || 0));
-  const newPrice = priceInput !== null && priceInput.trim() !== '' ? Number(priceInput) : item.unitPrice;
-  const recordExp = confirm('هل ترغب بتسجيل تكلفة هذه الكمية المضافة كمصروف شراء في الحسابات المالية؟');
-
-  const updated = window.ClinicDB.restockInventoryItem(id, addQty, newPrice, recordExp);
-  window.renderInventoryTable();
-  window.renderFinanceAndExpenses();
-  window.showToast(`✅ تم تزويد (${updated.name}) ليصبح الرصيد: ${updated.qty} ${updated.unit}`, 'success');
+window.quickRestockInventoryUI = async function(id) {
+  const item = (window.AppState.inventory || []).find(i => i.id === id); if (!item) return;
+  const val = await window.showCustomDialog({ type: 'prompt', title: 'تزويد المخزون', message: 'المادة: ' + item.name + '\nالكمية الحالية: ' + item.qty + ' ' + (item.unit || 'عدد') + '\nأدخل الكمية المضافة:', defaultValue: '5' });
+  if (val === null) return; const addQty = Number(val);
+  if (!Number.isFinite(addQty) || addQty <= 0) { window.showToast('يرجى إدخال كمية صحيحة أكبر من الصفر', 'warning'); return; }
+  const priceInput = await window.showCustomDialog({ type: 'prompt', title: 'سعر الوحدة', message: 'سعر الوحدة الحالي: ' + (item.unitPrice || 0) + '\nأدخل السعر الجديد أو اتركه كما هو:', defaultValue: String(item.unitPrice || 0) });
+  if (priceInput === null) return; const newPrice = priceInput.trim() !== '' ? Number(priceInput) : item.unitPrice;
+  if (!Number.isFinite(newPrice) || newPrice < 0) { window.showToast('يرجى إدخال سعر صحيح', 'warning'); return; }
+  const recordExp = await window.showCustomDialog({ type: 'confirm', title: 'تسجيل تكلفة الشراء', message: 'هل ترغب بتسجيل تكلفة هذه الكمية المضافة كمصروف شراء في الحسابات المالية؟' });
+  const updated = window.ClinicDB.restockInventoryItem(id, addQty, newPrice, recordExp); window.renderInventoryTable(); window.renderFinanceAndExpenses();
+  window.showToast('تم تزويد (' + updated.name + ') ليصبح الرصيد: ' + updated.qty + ' ' + updated.unit, 'success');
 };
 
 window.editInventoryItemUI = function(id) {
@@ -891,13 +897,10 @@ window.editInventoryItemUI = function(id) {
   window.showToast(`جاري تعديل بيانات المادة: ${item.name}`, 'info');
 };
 
-window.deleteInventoryItemUI = function(id) {
-  const item = (window.AppState.inventory || []).find(i => i.id === id);
-  if (!item) return;
-  if (!confirm(`هل أنت متأكد من حذف مادة (${item.name}) من المخزون؟`)) return;
-  window.ClinicDB.deleteInventoryItem(id);
-  window.renderInventoryTable();
-  window.showToast('تم حذف المادة من المخزون', 'info');
+window.deleteInventoryItemUI = async function(id) {
+  const item = (window.AppState.inventory || []).find(i => i.id === id); if (!item) return;
+  if (!await window.showCustomDialog({ type: 'confirm', title: 'حذف مادة من المخزون', message: 'هل أنت متأكد من حذف المادة (' + item.name + ') من المخزون؟' })) return;
+  window.ClinicDB.deleteInventoryItem(id); window.renderInventoryTable(); window.showToast('تم حذف المادة من المخزون', 'info');
 };
 
 window.runInventoryAuditAI = async function() {
@@ -978,11 +981,9 @@ window.addExpenseFromUI = function() {
   window.showToast('تم تسجيل المصروف وخصمه من صافي الأرباح بنجاح', 'success');
 };
 
-window.deleteExpenseUI = function(id) {
-  if (!confirm('هل تريد حذف هذا المصروف؟')) return;
-  window.ClinicDB.deleteExpense(id);
-  window.renderFinanceAndExpenses();
-  window.showToast('تم حذف المصروف', 'info');
+window.deleteExpenseUI = async function(id) {
+  if (!await window.showCustomDialog({ type: 'confirm', title: 'حذف المصروف', message: 'هل تريد حذف هذا المصروف؟' })) return;
+  window.ClinicDB.deleteExpense(id); window.renderFinanceAndExpenses(); window.showToast('تم حذف المصروف', 'info');
 };
 
 window.generateComprehensiveFinancialReport = async function() {
@@ -1156,6 +1157,7 @@ window.loadSettingsToUI = function() {
   setVal('cfg-currency', id.defaultCurrency);
 
   setVal('cfg-theme-select', app.theme || 'navy');
+  setVal('cfg-font-family', app.fontFamily || 'Cairo');
   setVal('cfg-color-primary', app.customPrimaryColor || '#0B2545');
   setVal('cfg-color-secondary', app.customSecondaryColor || '#1d6fa5');
   setVal('cfg-color-accent', app.customAccentColor || '#00A8E8');
@@ -1202,6 +1204,7 @@ window.saveAllSettingsFromUI = function() {
   s.appearance = {
     ...s.appearance,
     theme: getVal('cfg-theme-select', 'navy'),
+    fontFamily: getVal('cfg-font-family', 'Cairo'),
     customPrimaryColor: getVal('cfg-color-primary', '#0B2545'),
     customSecondaryColor: getVal('cfg-color-secondary', '#1d6fa5'),
     customAccentColor: getVal('cfg-color-accent', '#00A8E8'),
@@ -1314,12 +1317,12 @@ window.addNewServiceRow = function() {
   window.renderSettingsServicesList();
 };
 
-window.removeServiceRow = function(index) {
+window.removeServiceRow = async function(index) {
   const services = window.AppState?.settings?.services;
   if (!Array.isArray(services) || index < 0 || index >= services.length) return;
   const service = services[index];
   const label = String(service?.name || 'هذه الخدمة');
-  if (!window.confirm(`هل تريد حذف "${label}" من قائمة الخدمات؟ لن تُحذف السندات السابقة.`)) return;
+  if (!await window.showCustomDialog({ type: 'confirm', title: 'حذف الخدمة', message: 'هل تريد حذف "' + label + '" من قائمة الخدمات؟ لن تُحذف السندات السابقة.' })) return;
   services.splice(index, 1);
   window.renderSettingsServicesList();
   if (window.showToast) window.showToast('تمت إزالة الخدمة من القائمة. اضغط حفظ الإعدادات لتثبيت التغيير.', 'info');
