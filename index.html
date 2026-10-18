@@ -199,6 +199,25 @@
         margin: 0 auto !important;
       }
     }
+
+    /* DOCAI refinement: full-height dedicated chat screen, readable text, and responsive receipt data */
+    .docai-chat-page { min-height: calc(100dvh - 112px); }
+    .docai-chat-shell { height: calc(100dvh - 128px); min-height: 520px; }
+    #chat-messages-container { color: #f1f5f9; font-size: 14px; line-height: 1.8; }
+    #chat-messages-container .chat-body-content { color: #f1f5f9; line-height: 1.85; overflow-wrap: anywhere; }
+    #chat-user-input { font-size: 14px !important; min-width: 0; }
+    @media (max-width: 640px) {
+      .docai-chat-page { position: fixed; inset: 64px 0 0; z-index: 30; background: #020617; padding: 8px !important; overflow: auto; }
+      .docai-chat-shell { height: calc(100dvh - 80px); min-height: 0; border-radius: 16px; }
+      #chat-messages-container { padding: 12px !important; }
+      #chat-user-input { min-height: 44px; }
+      #records-table-body td, #inventory-table-body td { vertical-align: top; }
+      #records-table-body td[dir="ltr"] { white-space: nowrap; }
+      #inventory-table-body td:last-child > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+      #inventory-table-body td:last-child button { justify-content: center; min-width: 0; padding: 8px 5px; font-size: 11px; }
+      #receipt-capture-area .receipt-header, #receipt-capture-area [data-receipt-header] { flex-wrap: nowrap; }
+    }
+    #live-voice-call-modal, [onclick*="toggleLiveVoiceCall"], [onclick*="startLiveVoiceCall"] { display: none !important; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -213,7 +232,7 @@
           title="فتح القائمة الجانبية والإعدادات السريعة">
           ☰
         </button>
-        <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Logo"
+        <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Logo"
           class="clinic-logo-img w-11 h-11 rounded-xl bg-white p-1 object-contain shadow-md" crossorigin="anonymous" />
         <div>
           <h1 id="header-system-title" class="text-base sm:text-lg font-black text-white leading-tight">
@@ -257,7 +276,7 @@
       <!-- رأس القائمة الجانبية -->
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
-          <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Logo"
+          <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Logo"
             class="clinic-logo-img w-10 h-10 rounded-xl bg-white p-1 object-contain" crossorigin="anonymous" />
           <div>
             <div id="drawer-clinic-title" class="font-extrabold text-sm text-white">نظام عيادة د. صلاح الدين السعيدي</div>
@@ -526,7 +545,7 @@
           <div id="receipt-capture-area" class="receipt-paper rounded-2xl p-6 shadow-2xl relative overflow-hidden">
 
             <!-- العلامة المائية في الخلفية -->
-            <img id="preview-watermark-img" src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png"
+            <img id="preview-watermark-img" src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E"
               alt="Watermark" crossorigin="anonymous"
               class="pointer-events-none select-none absolute inset-0 m-auto w-64 h-64 object-contain"
               style="opacity: 0.06;" />
@@ -541,7 +560,7 @@
 
               <!-- وسط: الشعار وعنوان السند -->
               <div class="flex flex-col items-center">
-                <img src="https://cdn-icons-png.flaticon.com/512/2818/2818366.png" alt="Clinic Logo"
+                <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Clinic Logo"
                   class="clinic-logo-img w-14 h-14 object-contain mb-1" crossorigin="anonymous" />
                 <div class="px-4 py-1 rounded-full bg-slate-900 text-white text-xs font-black">
                   سند قبض مالي | RECEIPT VOUCHER
@@ -575,8 +594,8 @@
             <div class="relative z-10 space-y-2.5 text-xs sm:text-sm mb-4">
               <div class="flex items-center justify-between border-b border-dashed border-slate-300 pb-2">
                 <div>
-                  <span class="font-bold text-slate-600">استلمنا من المريض المكرم:</span>
-                  <span id="preview-patient-name" class="font-black text-slate-950 mr-2">................................................</span>
+                  <span class="font-bold text-slate-600">استلمنا من /</span>
+                  <span id="preview-patient-name" class="font-black text-slate-950 mr-1">................................................</span><span class="font-bold text-slate-600 mr-1">المحترم</span>
                 </div>
                 <div>
                   <span class="font-bold text-slate-600">هاتف:</span>
@@ -850,8 +869,8 @@
     </section>
 
     <!-- ==================== القسم 5: شاشة المحادثة الذكية المنسقة + رفع الملفات والصور ==================== -->
-    <section id="tab-section-ai-chat" class="hidden no-print">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col h-[76vh]">
+    <section id="tab-section-ai-chat" class="hidden no-print docai-chat-page">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col docai-chat-shell">
 
         <!-- رأس شاشة المحادثة -->
         <div class="p-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 rounded-t-2xl">
@@ -863,10 +882,6 @@
             <button type="button" onclick="window.testAndDiscoverAllModels()"
               class="px-3 py-1.5 rounded-xl bg-sky-600/30 hover:bg-sky-600 border border-sky-400/40 text-xs font-extrabold text-white">
               🔍 فحص النماذج المتاحة
-            </button>
-            <button type="button" onclick="window.toggleLiveVoiceCall()"
-              class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold text-white">
-              📞 مكالمة حية
             </button>
             <button type="button" onclick="window.clearChatHistoryUI()"
               class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">
@@ -1144,32 +1159,6 @@
           ✅ اعتماد التوقيع
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- ==================== نافذة المكالمة الصوتية الحية (Live Voice Call Modal) ==================== -->
-  <div id="live-voice-call-modal" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 text-center space-y-5 shadow-2xl">
-      <div id="live-call-engine-badge" class="inline-block px-3 py-1 rounded-full bg-slate-800 text-sky-300 text-[11px] font-bold">
-        STT: سحابي AI | TTS: سحابي AI
-      </div>
-
-      <div id="live-call-orb" class="w-28 h-28 rounded-full flex items-center justify-center mx-auto bg-emerald-500/20 border-4 border-emerald-400 animate-pulse">
-        <span class="text-4xl">🎙️</span>
-      </div>
-
-      <div id="live-call-status-text" class="text-sm font-extrabold text-white">
-        تحدث الآن يا دكتور... أنا أستمع إليك مباشرة
-      </div>
-
-      <div id="live-call-transcript" class="min-h-[70px] max-h-40 overflow-y-auto bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 leading-relaxed">
-        ...
-      </div>
-
-      <button type="button" onclick="window.stopLiveVoiceCall()"
-        class="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm shadow-lg">
-        🛑 إنهاء المكالمة الصوتية الحية
-      </button>
     </div>
   </div>
 

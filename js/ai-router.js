@@ -222,20 +222,35 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
   throw new Error('لا توجد نماذج ذكاء اصطناعي مهيأة أو مجتازة للاختبار. أضف مفتاحًا صالحًا لأحد المزودين من الإعدادات ثم اضغط «فحص النماذج المتاحة».');
 };
 
+function docaiAttachmentMime(data, fallback = 'image/jpeg') {
+  const match = String(data || '').match(/^data:([^;,]+)(?:;[^,]*)?,/i);
+  return match ? match[1].toLowerCase() : fallback;
+}
+function docaiAttachmentBytes(data) { const value = String(data || ''); return value.includes(',') ? value.slice(value.indexOf(',') + 1) : value; }
 async function callGeminiAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
   const parts = [{ text: userPrompt }];
-  if (imageBase64) { const b64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64; parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } }); }
+  if (imageBase64) {
+    const mimeType = docaiAttachmentMime(imageBase64, 'image/jpeg');
+    if (!(mimeType.startsWith('image/') || mimeType === 'application/pdf')) throw new Error('نوع الملف غير مدعوم للتحليل المباشر: ' + mimeType);
+    parts.push({ inline_data: { mime_type: mimeType, data: docaiAttachmentBytes(imageBase64) } });
+  }
   const res = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents:[{ role:'user', parts }], generationConfig:{temperature:0.2, maxOutputTokens:2048} }) }, timeoutMs);
   const data = await res.json().catch(()=>({})); if (!res.ok) throw new Error(data?.error?.message || `Gemini HTTP ${res.status}`);
   const text = docaiCleanModelReply(aiResponseText(data, 'gemini')); if (!text) throw new Error('أعاد Gemini استجابة فارغة'); return text;
 }
 async function callGroqAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
-  const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
+  if (imageBase64 && docaiAttachmentMime(imageBase64, 'image/jpeg') === 'application/pdf') throw new Error('تحليل PDF المباشر غير مدعوم عبر Groq؛ سيجرب النظام نموذج Gemini الداعم لملفات PDF.');
+  const mimeType = imageBase64 ? docaiAttachmentMime(imageBase64, 'image/jpeg') : '';
+  if (imageBase64 && !mimeType.startsWith('image/')) throw new Error('Groq يدعم مرفقات الصور فقط في هذا المسار.');
+  const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:${mimeType};base64,${imageBase64}`}}] : userPrompt;
   const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`}, body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3}) }, timeoutMs);
   const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`Groq HTTP ${res.status}`); const text=docaiCleanModelReply(aiResponseText(data,'groq')); if(!text) throw new Error('أعاد Groq استجابة فارغة'); return text;
 }
 async function callOpenRouterAPI(apiKey, model, systemPrompt, userPrompt, imageBase64, timeoutMs = 10000) {
-  const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:image/jpeg;base64,${imageBase64}`}}] : userPrompt;
+  if (imageBase64 && docaiAttachmentMime(imageBase64, 'image/jpeg') === 'application/pdf') throw new Error('تحليل PDF المباشر غير مدعوم في مسار الصور لدى OpenRouter؛ سيجرب النظام نموذج Gemini الداعم لملفات PDF.');
+  const mimeType = imageBase64 ? docaiAttachmentMime(imageBase64, 'image/jpeg') : '';
+  if (imageBase64 && !mimeType.startsWith('image/')) throw new Error('نوع المرفق غير مدعوم في مسار الصور لدى OpenRouter.');
+  const content = imageBase64 ? [{type:'text',text:userPrompt},{type:'image_url',image_url:{url:imageBase64.startsWith('data:')?imageBase64:`data:${mimeType};base64,${imageBase64}`}}] : userPrompt;
   const res=await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`,'HTTP-Referer':location.origin,'X-Title':'DOCAI-GEMINI ERP'},body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt},{role:'user',content}],temperature:0.3})},timeoutMs);
   const data=await res.json().catch(()=>({})); if(!res.ok) throw new Error(data?.error?.message||`OpenRouter HTTP ${res.status}`); const text=docaiCleanModelReply(aiResponseText(data,'openrouter')); if(!text) throw new Error('أعاد OpenRouter استجابة فارغة'); return text;
 }
