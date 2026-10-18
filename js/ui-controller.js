@@ -1089,7 +1089,9 @@ window.appendChatMessageUI = function(role, text, attachmentMeta = null) {
   container.scrollTop = container.scrollHeight;
 };
 
+let docaiChatSending = false;
 window.sendChatMessageUI = async function() {
+  if (docaiChatSending) return;
   const inputEl = document.getElementById('chat-user-input');
   const userText = inputEl?.value?.trim() || '';
   const att = window.VoiceVisionState?.attachment || { hasAttachment: false };
@@ -1099,9 +1101,24 @@ window.sendChatMessageUI = async function() {
     return;
   }
 
+  docaiChatSending = true;
+  const sendButton = document.querySelector('#tab-section-ai-chat button[onclick="window.sendChatMessageUI()"]');
+  const originalButtonText = sendButton ? sendButton.textContent : '';
+  if (sendButton) {
+    sendButton.disabled = true;
+    sendButton.textContent = '⏳ جارٍ الرد…';
+    sendButton.classList.add('opacity-60');
+  }
   const displayMsg = userText || `تحليل الملف المرفق: ${att.fileName}`;
   window.appendChatMessageUI('user', displayMsg, att);
   if (inputEl) inputEl.value = '';
+  const chatContainer = document.getElementById('chat-messages-container');
+  const thinking = document.createElement('div');
+  thinking.id = 'docai-thinking-indicator';
+  thinking.className = 'flex w-full justify-end my-2';
+  thinking.innerHTML = '<div class="rounded-2xl rounded-tl-none border border-sky-500/30 bg-slate-800 px-4 py-3 text-xs text-slate-300"><strong>🤖 DOCAI يفكر الآن</strong><div class="mt-1">⏳ جارٍ تجهيز الرد…</div></div>';
+  if (chatContainer) { chatContainer.appendChild(thinking); chatContainer.scrollTop = chatContainer.scrollHeight; }
+
 
   let fullPrompt = userText || 'حلل هذا المرفق الطبي/المالي بالتفصيل وقدّم الخلاصة باللغة العربية.';
   let imageBase64 = null;
@@ -1118,13 +1135,23 @@ window.sendChatMessageUI = async function() {
 
   try {
     const reply = await window.callAI(fullPrompt, imageBase64);
+    if (thinking.isConnected) thinking.remove();
     window.appendChatMessageUI('ai', reply);
 
     if (window.AppState.settings.ai.autoSpeakReplies) {
       window.speakText(reply);
     }
   } catch (err) {
+    if (thinking.isConnected) thinking.remove();
     window.appendChatMessageUI('ai', `⚠️ تعذر إكمال الطلب: ${err.message}`);
+  } finally {
+    if (thinking.isConnected) thinking.remove();
+    docaiChatSending = false;
+    if (sendButton) {
+      sendButton.disabled = false;
+      sendButton.textContent = originalButtonText || 'إرسال 🚀';
+      sendButton.classList.remove('opacity-60');
+    }
   }
 };
 
