@@ -177,11 +177,40 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
     contextIntent ? 'استخدم سياق العيادة المرفق فقط عند الإجابة عن بيانات العيادة.' : '',
     contextIntent ? 'سياق العيادة: ' + JSON.stringify(context) : ''
   ].filter(Boolean).join('\n');
+  const requested = options.modelId || settings.selectedMode || 'auto';
+
+  // Use server-side Vercel secrets when no provider key is saved in this browser.
+  // This preserves local-key support while allowing the deployed app to work on a fresh device.
+  const hasLocalProviderKey = Boolean(settings.geminiKey || settings.groqKey || settings.openrouterKey);
+  if (!hasLocalProviderKey) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.max(5000, Math.min(Number(options.timeoutMs) || 25000, 30000)));
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ systemPrompt, userPrompt: userText, imageBase64, modelId: requested }),
+        signal: controller.signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || ('خدمة الذكاء الاصطناعي HTTP ' + response.status));
+      const answer = docaiCleanModelReply(String(data?.text || ''));
+      if (!answer) throw new Error('أعاد خادم الذكاء الاصطناعي استجابة فارغة.');
+      return answer;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('تأخر رد الذكاء الاصطناعي؛ تحقق من الشبكة ومفاتيح Vercel.');
+      if (error instanceof TypeError) throw new Error('تعذر الوصول إلى /api/ai. افتح نسخة DOCAI المنشورة على Vercel.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   const liveCatalog = Array.isArray(window.AI_MODELS_CATALOG) ? window.AI_MODELS_CATALOG : [];
   const savedIds = Array.isArray(window.AppState?.verifiedModels) ? window.AppState.verifiedModels : [];
   const restoredCatalog = savedIds.map(id => ({ id, provider: inferAIProvider(id), status: 'working', source: 'saved-verification' }));
   const models = liveCatalog.length ? liveCatalog : restoredCatalog;
-  const requested = options.modelId || settings.selectedMode || 'auto';
   let candidates = requested === 'auto' ? models.filter(m => m.status === 'working') : models.filter(m => m.id === requested);
   if (requested === 'auto') candidates = candidates.filter(model => Boolean(settings[`${model.provider}Key`]));
   if (requested !== 'auto' && candidates.length === 0) candidates = [{ id: requested, provider: inferAIProvider(requested) }];
