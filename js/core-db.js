@@ -693,6 +693,46 @@ window.exportDataToCSV = function(type = 'receipts') {
   if (window.showToast) window.showToast('تم تصدير ملف الجدول (CSV/Excel) بنجاح', 'success');
 };
 
+async function docaiBackupCryptoKey(passphrase, salt) {
+  if (!window.crypto?.subtle) throw new Error('المتصفح لا يدعم التشفير الآمن؛ استخدم HTTPS أو متصفحاً حديثاً.');
+  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+    material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+function docaiBytesToBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+function docaiBase64ToBytes(value) {
+  const binary = atob(String(value || ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+async function docaiEncryptCloudBackup(payload, passphrase) {
+  if (!passphrase || passphrase.length < 8) throw new Error('اختر كلمة تشفير من 8 أحرف على الأقل للنسخة السحابية.');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await docaiBackupCryptoKey(passphrase, salt);
+  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  return {
+    docaiEncryptedBackup: 1, format: 'DOCAI_AES_GCM_V1', kdf: 'PBKDF2-SHA-256',
+    iterations: 250000, salt: docaiBytesToBase64(salt), iv: docaiBytesToBase64(iv),
+    ciphertext: docaiBytesToBase64(new Uint8Array(ciphertext)), encryptedAt: new Date().toISOString()
+  };
+}
+async function docaiDecryptCloudBackup(record, passphrase) {
+  if (!passphrase) throw new Error('أدخل كلمة تشفير النسخة السحابية نفسها التي استخدمتها عند الرفع.');
+  const salt = docaiBase64ToBytes(record.salt), iv = docaiBase64ToBytes(record.iv);
+  const key = await docaiBackupCryptoKey(passphrase, salt);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, docaiBase64ToBytes(record.ciphertext));
+  return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
 window.syncDataToCloud = async function() {
   const key = document.getElementById('cfg-cloud-key')?.value?.trim() || window.AppState.settings.cloud.apiKey;
   let binId = document.getElementById('cfg-cloud-bin')?.value?.trim() || window.AppState.settings.cloud.binId;
@@ -701,13 +741,22 @@ window.syncDataToCloud = async function() {
     return;
   }
 
-  window.AppState.settings.cloud.apiKey = key;
+  // Keep the JSONBin master key in the current form/session only; never include it in persisted settings or backups.
+  if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
   window.saveSettingsState();
-  if (window.showToast) window.showToast('جاري رفع النسخة الاحتياطية إلى السحابة...', 'info');
+  const passphrase = document.getElementById('cfg-cloud-backup-password')?.value || '';
+  if (passphrase.length < 8) {
+    if (window.showToast) window.showToast('أدخل كلمة تشفير للنسخة السحابية من 8 أحرف على الأقل.', 'warning');
+    return;
+  }
+  if (window.showToast) window.showToast('جارٍ تشفير النسخة الاحتياطية ورفعها إلى السحابة...', 'info');
 
+  const safeSettings = JSON.parse(JSON.stringify(window.AppState.settings || {}));
+  if (safeSettings.cloud) safeSettings.cloud.apiKey = '';
   const payload = {
+    schema: 'DOCAI_CLINIC_BACKUP_V1',
     updatedAt: new Date().toISOString(),
-    settings: window.AppState.settings,
+    settings: safeSettings,
     receipts: window.AppState.receipts,
     inventory: window.AppState.inventory,
     expenses: window.AppState.expenses
@@ -716,14 +765,15 @@ window.syncDataToCloud = async function() {
   try {
     const url = binId ? `https://api.jsonbin.io/v3/b/${binId}` : 'https://api.jsonbin.io/v3/b';
     const method = binId ? 'PUT' : 'POST';
+    const encryptedPayload = await docaiEncryptCloudBackup(payload, passphrase);
     const res = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Key': key,
-        'X-Bin-Name': 'DOCAI_CLINIC_ERP'
+        'X-Bin-Name': 'DOCAI_CLINIC_ERP_ENCRYPTED'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(encryptedPayload)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'فشل الرفع السحابي');
@@ -747,15 +797,28 @@ window.syncDataFromCloud = async function() {
     return;
   }
 
-  if (window.showToast) window.showToast('جاري جلب البيانات من السحابة...', 'info');
+  const passphrase = document.getElementById('cfg-cloud-backup-password')?.value || '';
+  if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
+  window.saveSettingsState();
+  if (window.showToast) window.showToast('جاري جلب النسخة السحابية المشفرة...', 'info');
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
       headers: { 'X-Master-Key': key }
     });
     const data = await res.json();
     if (!res.ok || !data.record) throw new Error(data.message || 'تعذر قراءة البيانات');
-    const rec = data.record;
+    let rec = data.record;
+    if (rec?.docaiEncryptedBackup === 1 && rec?.format === 'DOCAI_AES_GCM_V1') {
+      try { rec = await docaiDecryptCloudBackup(rec, passphrase); }
+      catch (_) { throw new Error('كلمة التشفير غير صحيحة أو أن النسخة المشفرة تالفة.'); }
+    } else if (window.showToast) {
+      window.showToast('تنبيه: هذه نسخة قديمة غير مشفرة. بعد الاستعادة ارفع نسخة جديدة بكلمة تشفير.', 'warning');
+    }
+    if (!rec || !Array.isArray(rec.receipts) || !Array.isArray(rec.inventory) || !Array.isArray(rec.expenses)) {
+      throw new Error('تنسيق النسخة الاحتياطية غير صالح.');
+    }
     if (rec.settings) window.AppState.settings = { ...DEFAULT_SETTINGS, ...rec.settings };
+    if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
     if (Array.isArray(rec.receipts)) window.AppState.receipts = rec.receipts;
     if (Array.isArray(rec.inventory)) window.AppState.inventory = rec.inventory;
     if (Array.isArray(rec.expenses)) window.AppState.expenses = rec.expenses;
