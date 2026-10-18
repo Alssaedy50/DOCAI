@@ -113,8 +113,16 @@ window.toggleSidebarDrawer = function(forceOpen = null) {
   }
 };
 
+window.docaiPreviousMainTab = window.docaiPreviousMainTab || 'receipt';
+
+window.exitFullscreenChat = function() {
+  window.switchMainTab(window.docaiPreviousMainTab || 'receipt');
+};
+
 window.switchMainTab = function(tabName) {
   const tabs = ['receipt', 'records', 'inventory', 'finance', 'ai-chat', 'settings'];
+  if (tabName !== 'ai-chat') window.docaiPreviousMainTab = tabName;
+  document.body.classList.toggle('docai-chat-mode', tabName === 'ai-chat');
   tabs.forEach(t => {
     const section = document.getElementById(`tab-section-${t}`);
     const btn = document.getElementById(`nav-btn-${t}`);
