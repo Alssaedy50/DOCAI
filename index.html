@@ -1098,6 +1098,11 @@
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
             </div>
             <div>
+              <label class="block text-slate-300 font-bold mb-1">كلمة تشفير النسخة السحابية (لا تُرسل إلى JSONBin)</label>
+              <input id="cfg-cloud-backup-password" type="password" minlength="8" autocomplete="new-password"
+                placeholder="كلمة سر من 8 أحرف على الأقل"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+              <p class="text-[11px] text-slate-400">تُشفّر البيانات باستخدام AES-GCM قبل الرفع. احتفظ بكلمة التشفير؛ لا يمكن استعادة النسخة بدونها.</p>
               <label class="block text-slate-300 font-bold mb-1">معرف الحاوية السحابية (Bin ID)</label>
               <input id="cfg-cloud-bin" type="text" dir="ltr" placeholder="يُنشأ تلقائياً عند أول رفع..."
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
