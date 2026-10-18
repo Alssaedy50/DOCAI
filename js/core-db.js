@@ -169,7 +169,18 @@ window.AppState = {
   currentAccountantSig: ''
 };
 
-window.saveSettingsState = () => localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(window.AppState.settings));
+function docaiSettingsWithoutSecrets(settings) {
+  const safe = JSON.parse(JSON.stringify(settings || {}));
+  if (safe.ai) {
+    safe.ai.geminiKey = '';
+    safe.ai.groqKey = '';
+    safe.ai.openrouterKey = '';
+  }
+  if (safe.cloud) safe.cloud.apiKey = '';
+  return safe;
+}
+// Provider and cloud API keys remain in memory/form fields for this session only.
+window.saveSettingsState = () => localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(docaiSettingsWithoutSecrets(window.AppState.settings)));
 window.saveReceiptsState = () => localStorage.setItem(STORAGE_KEYS.RECEIPTS, JSON.stringify(window.AppState.receipts));
 window.saveInventoryState = () => localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(window.AppState.inventory));
 window.saveExpensesState = () => localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(window.AppState.expenses));
@@ -550,7 +561,7 @@ window.exportLocalBackupJSON = function() {
     app: 'DOCAI_GEMINI_CLINIC_ERP',
     version: '3.0',
     exportedAt: new Date().toISOString(),
-    settings: window.AppState.settings,
+    settings: docaiSettingsWithoutSecrets(window.AppState.settings),
     receipts: window.AppState.receipts,
     inventory: window.AppState.inventory,
     expenses: window.AppState.expenses
@@ -612,6 +623,13 @@ window.importLocalBackupJSON = function(event) {
       }
 
       window.AppState.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+      if (window.AppState.settings.ai) {
+        window.AppState.settings.ai.geminiKey = '';
+        window.AppState.settings.ai.groqKey = '';
+        window.AppState.settings.ai.openrouterKey = '';
+      }
+      if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
+      window.AppState.settings = { ...window.AppState.settings, cloud: { ...DEFAULT_SETTINGS.cloud, ...(window.AppState.settings.cloud || {}), apiKey: '' } };
       window.AppState.receipts = data.receipts;
       window.AppState.inventory = data.inventory;
       window.AppState.expenses = data.expenses;
@@ -751,8 +769,7 @@ window.syncDataToCloud = async function() {
   }
   if (window.showToast) window.showToast('جارٍ تشفير النسخة الاحتياطية ورفعها إلى السحابة...', 'info');
 
-  const safeSettings = JSON.parse(JSON.stringify(window.AppState.settings || {}));
-  if (safeSettings.cloud) safeSettings.cloud.apiKey = '';
+  const safeSettings = docaiSettingsWithoutSecrets(window.AppState.settings);
   const payload = {
     schema: 'DOCAI_CLINIC_BACKUP_V1',
     updatedAt: new Date().toISOString(),
