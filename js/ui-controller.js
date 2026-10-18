@@ -1274,13 +1274,20 @@ window.saveAllSettingsFromUI = function() {
   const serviceRows = document.querySelectorAll('.settings-service-row');
   if (serviceRows.length > 0) {
     const updatedServices = [];
+    const usedServiceNames = new Set();
     serviceRows.forEach((row, idx) => {
-      const name = row.querySelector('.srv-name-input')?.value?.trim();
+      let name = row.querySelector('.srv-name-input')?.value?.trim();
       const price = Number(row.querySelector('.srv-price-input')?.value) || 0;
       const kwRaw = row.querySelector('.srv-kw-input')?.value || '';
       if (name) {
+        const baseName = name;
+        let suffix = 2;
+        while (usedServiceNames.has(name.toLocaleLowerCase())) name = baseName + ' (' + suffix++ + ')';
+        usedServiceNames.add(name.toLocaleLowerCase());
         const id = row.dataset.serviceId || 'srv_' + idx + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
         updatedServices.push({ id, name, price, keywords: kwRaw.split(',').map(k => k.trim()).filter(Boolean) });
+        const nameInput = row.querySelector('.srv-name-input');
+        if (nameInput && nameInput.value.trim() !== name) nameInput.value = name;
       }
     });
     if (updatedServices.length > 0) {
