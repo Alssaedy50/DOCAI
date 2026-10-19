@@ -344,8 +344,9 @@ window.updateReceiptQRCode = async function(customData = null) {
   const patient = customData?.patientName || document.getElementById('rec-patient-name')?.value || 'مريض';
   const paid = customData?.paidAmount ?? (document.getElementById('rec-paid-amount')?.value || 0);
   const rem = customData?.remainingAmount ?? Math.max(0, (Number(document.getElementById('rec-total-amount')?.value) || 0) - (Number(paid) || 0));
+  const toothFDI = customData?.toothFDI || document.getElementById('rec-tooth-fdi')?.value?.trim() || '';
 
-  const qrPayload = `DOCAI|${identity.doctorEn || 'ALSSAEDY'}|NO:${recNo}|DT:${date}|PT:${patient}|PAID:${paid}|REM:${rem}`;
+  const qrPayload = `DOCAI|${identity.doctorEn || 'ALSSAEDY'}|NO:${recNo}|DT:${date}|PT:${patient}|FDI:${toothFDI}|PAID:${paid}|REM:${rem}`;
 
   qrContainer.innerHTML = '';
 
