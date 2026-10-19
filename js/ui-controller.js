@@ -205,7 +205,7 @@ window.applyIdentityAndThemeToDOM = function() {
   document.documentElement.style.setProperty('--clinic-primary', primary);
   document.documentElement.style.setProperty('--clinic-secondary', secondary);
   document.documentElement.style.setProperty('--clinic-accent', accent);
-  const fontFamily = ['Cairo', 'Tajawal', 'Arial', 'Tahoma'].includes(app.fontFamily) ? app.fontFamily : 'Cairo';
+  const fontFamily = ['Cairo', 'Tajawal', 'Arial', 'Tahoma'].includes(app.fontFamily) ? app.fontFamily : 'Tajawal';
   document.documentElement.style.setProperty('--clinic-font-family', '"' + fontFamily + '", sans-serif');
   document.body.style.fontFamily = '"' + fontFamily + '", sans-serif';
 
@@ -1241,7 +1241,7 @@ window.loadSettingsToUI = function() {
   setVal('cfg-currency', id.defaultCurrency);
 
   setVal('cfg-theme-select', app.theme || 'navy');
-  setVal('cfg-font-family', app.fontFamily || 'Cairo');
+  setVal('cfg-font-family', app.fontFamily || 'Tajawal');
   setVal('cfg-color-primary', app.customPrimaryColor || '#0B2545');
   setVal('cfg-color-secondary', app.customSecondaryColor || '#1d6fa5');
   setVal('cfg-color-accent', app.customAccentColor || '#00A8E8');
@@ -1292,7 +1292,7 @@ window.saveAllSettingsFromUI = function() {
   s.appearance = {
     ...s.appearance,
     theme: getVal('cfg-theme-select', 'navy'),
-    fontFamily: getVal('cfg-font-family', 'Cairo'),
+    fontFamily: getVal('cfg-font-family', 'Tajawal'),
     customPrimaryColor: getVal('cfg-color-primary', '#0B2545'),
     customSecondaryColor: getVal('cfg-color-secondary', '#1d6fa5'),
     customAccentColor: getVal('cfg-color-accent', '#00A8E8'),
