@@ -421,6 +421,7 @@ window.ClinicDB = {
       title: (title || 'مصروف عيادة').trim(),
       amount: Number(amount) || 0,
       category: category,
+      currency: window.AppState.settings?.identity?.defaultCurrency || 'ريال يمني',
       date: new Date().toISOString().slice(0, 10)
     };
     window.AppState.expenses.unshift(exp);
