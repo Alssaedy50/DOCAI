@@ -1,4 +1,5 @@
 // Server-side model discovery and live verification. Provider keys never leave Vercel.
+const { authorize } = require('./_security');
 const DEFAULTS = [
   { id: 'gemini-2.5-flash', provider: 'gemini', name: 'Gemini 2.5 Flash', free: null },
   { id: 'gemini-2.0-flash', provider: 'gemini', name: 'Gemini 2.0 Flash', free: null },
@@ -46,6 +47,7 @@ async function testModel(model, keys) {
   } catch (_) { return null; }
 }
 module.exports = async function handler(req, res) {
+  if (!(await authorize(req, res, 'models', 10, 60000))) return;
   if (req.method === 'GET') {
     return json(res, 200, { configuredProviders: [
       process.env.GEMINI_API_KEY ? 'gemini' : null,
