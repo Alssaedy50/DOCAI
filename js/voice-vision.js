@@ -83,9 +83,19 @@ window.toggleVoiceInput = async function(targetInputId, onCompleteCallback = nul
   }
 
   const { stt } = window.getActiveVoiceEngines();
-  const hasCloudKey = Boolean(window.AppState?.settings?.ai?.groqKey || window.AppState?.settings?.ai?.geminiKey);
+  const aiCfg = window.AppState?.settings?.ai || {};
+  let hasCloudKey = Boolean(aiCfg.groqKey || aiCfg.geminiKey);
+  if (stt === 'ai_cloud' && !hasCloudKey) {
+    try {
+      const response = await voiceFetchWithTimeout('/api/ai', {
+        method: 'GET', headers: window.docaiApiHeaders(), cache: 'no-store'
+      }, 5000);
+      const data = await response.json().catch(() => ({}));
+      hasCloudKey = response.ok && Array.isArray(data.configuredProviders) && data.configuredProviders.includes('groq');
+    } catch (_) {}
+  }
 
-  // إذا اختار المستخدم صوت النماذج السحابية وتوفر مفتاح (Groq Whisper أو Gemini Audio)
+  // Server-side Groq keys count as cloud STT credentials; don't silently fall back to phone speech.
   if (stt === 'ai_cloud' && hasCloudKey && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     await startCloudAiRecording(targetInputId, onCompleteCallback);
   } else {
@@ -294,7 +304,26 @@ async function transcribeAudioWithCloudAI(audioBlob) {
     return txt.trim();
   }
 
-  throw new Error('يرجى إدخال مفتاح Groq أو Gemini لتفعيل الإدخال الصوتي السحابي');
+  // If provider keys exist only in Vercel, keep audio credentials server-side.
+  try {
+    const dataUrl = await blobToBase64(audioBlob);
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const mimeType = (audioBlob.type || 'audio/webm').split(';')[0];
+    const response = await voiceFetchWithTimeout('/api/stt', {
+      method: 'POST',
+      headers: window.docaiApiHeaders({ 'Content-Type': 'application/json' }),
+      cache: 'no-store',
+      body: JSON.stringify({ audioBase64: base64, mimeType })
+    }, 18000);
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data.text) return String(data.text).trim();
+    if (response.status === 401 || response.status === 503) {
+      throw new Error(data.error || 'تعذر التحقق من رمز العيادة أو إعداد مفتاح Groq على الخادم.');
+    }
+    throw new Error(data.error || 'فشل تفريغ الصوت عبر خادم DOCAI.');
+  } catch (error) {
+    throw new Error(error.message || 'تعذر تفريغ الصوت السحابي.');
+  }
 }
 
 /* ==================== 3. محرك النطق الصوتي المزدوج (Dual TTS: Phone Native vs Gemini Cloud Audio) ==================== */
