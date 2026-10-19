@@ -49,6 +49,14 @@ window.showToast = function(message, type = 'info') {
   }, 3800);
 };
 
+function safeInlineArgument(value) {
+  return JSON.stringify(String(value ?? ''))
+    .replace(/'/g, '\\u0027')
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 function escapeHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
@@ -648,16 +656,16 @@ window.renderRecordsTable = function() {
       <tr class="border-b border-slate-800 hover:bg-slate-800/60 transition-colors text-xs">
         <td class="py-3 px-3 font-extrabold text-sky-300" dir="ltr"><span class="whitespace-nowrap">#${escapeHtml(r.receiptNo)}</span></td>
         <td class="py-3 px-3 text-slate-200" dir="ltr"><span class="whitespace-nowrap">${escapeHtml(r.date)}</span></td>
-        <td class="py-3 px-3 font-bold text-white"><button type="button" onclick="window.editReceiptRecord('${r.id}')" class="text-sky-200 hover:text-white underline-offset-4 hover:underline">${escapeHtml(r.patientName)}</button></td>
+        <td class="py-3 px-3 font-bold text-white"><button type="button" onclick='window.editReceiptRecord(${safeInlineArgument(r.id)})' class="text-sky-200 hover:text-white underline-offset-4 hover:underline">${escapeHtml(r.patientName)}</button></td>
         <td class="py-3 px-3 text-slate-300" dir="ltr">${escapeHtml(r.patientPhone || '—')}</td>
         <td class="py-3 px-3 text-slate-200">${escapeHtml((r.services || []).join(' + ') || 'خدمات عامة')}</td>
         <td class="py-3 px-3 text-slate-100"><div class="flex flex-col gap-1 whitespace-nowrap"><span><span class="text-slate-400">المقبوض:</span> <b class="text-emerald-300" dir="ltr">${(Number(r.paidAmount) || 0).toLocaleString()}</b></span><span><span class="text-slate-400">الإجمالي:</span> <b class="text-sky-200" dir="ltr">${(Number(r.totalAmount) || 0).toLocaleString()}</b></span></div></td>
         <td class="py-3 px-3">${statusBadge}</td>
         <td class="py-3 px-3">
           <div class="flex items-center gap-1.5 flex-wrap">
-            ${rem > 0 ? `<button type="button" onclick="window.promptSettleDebtUI('${r.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold">💰 تسديد</button>` : ''}
-            <button type="button" onclick="window.editReceiptRecord('${r.id}')" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold">📄 عرض/تعديل</button>
-            <button type="button" onclick="window.deleteReceiptRecordUI('${r.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white font-bold">🗑️ حذف</button>
+            ${rem > 0 ? `<button type="button" onclick='window.promptSettleDebtUI(${safeInlineArgument(r.id)})' class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold">💰 تسديد</button>` : ''}
+            <button type="button" onclick='window.editReceiptRecord(${safeInlineArgument(r.id)})' class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold">📄 عرض/تعديل</button>
+            <button type="button" onclick='window.deleteReceiptRecordUI(${safeInlineArgument(r.id)})' class="px-2.5 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white font-bold">🗑️ حذف</button>
           </div>
         </td>
       </tr>
@@ -836,19 +844,19 @@ window.renderInventoryTable = function() {
         <td class="py-3.5 px-3">
           <!-- أزرار كبيرة وبارزة وواضحة للاستهلاك والتزويد والتعديل والحذف -->
           <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.quickConsumeInventoryUI('${item.id}')"
+            <button type="button" onclick='window.quickConsumeInventoryUI(${safeInlineArgument(item.id)})'
               class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md flex items-center gap-1">
               <span>➖</span><span>استهلاك مادة</span>
             </button>
-            <button type="button" onclick="window.quickRestockInventoryUI('${item.id}')"
+            <button type="button" onclick='window.quickRestockInventoryUI(${safeInlineArgument(item.id)})'
               class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md flex items-center gap-1">
               <span>➕</span><span>تزويد مخزون</span>
             </button>
-            <button type="button" onclick="window.editInventoryItemUI('${item.id}')"
+            <button type="button" onclick='window.editInventoryItemUI(${safeInlineArgument(item.id)})'
               class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md">
               ✏️ تعديل
             </button>
-            <button type="button" onclick="window.deleteInventoryItemUI('${item.id}')"
+            <button type="button" onclick='window.deleteInventoryItemUI(${safeInlineArgument(item.id)})'
               class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md">
               🗑️ حذف
             </button>
@@ -926,6 +934,15 @@ window.renderFinanceAndExpenses = function() {
   const expTbody = document.getElementById('expenses-table-body');
   const ov = window.ClinicDB.getFinancialOverview();
   const curr = window.AppState.settings.identity.defaultCurrency || 'ريال يمني';
+  const currencyBreakdownHtml = (ov.currencyBreakdown || []).map(row => `
+    <div class="rounded-lg bg-slate-900/70 border border-slate-700 p-3">
+      <div class="font-extrabold text-sky-300 mb-1">${escapeHtml(row.currency)}</div>
+      <div class="text-xs text-slate-300">الإيرادات: <strong>${row.totalCollectedRevenue.toLocaleString()}</strong></div>
+      <div class="text-xs text-slate-300">الديون: <strong>${row.totalPendingDebts.toLocaleString()}</strong></div>
+      <div class="text-xs text-slate-300">المصروفات: <strong>${row.totalExpenses.toLocaleString()}</strong></div>
+      <div class="text-xs text-emerald-300">الصافي: <strong>${row.netCashProfit.toLocaleString()}</strong></div>
+    </div>
+  `).join('');
 
   if (kpiContainer) {
     kpiContainer.innerHTML = `
@@ -949,6 +966,11 @@ window.renderFinanceAndExpenses = function() {
         <div class="text-2xl font-extrabold text-sky-400 mt-1">${ov.netCashProfit.toLocaleString()} <span class="text-xs">${escapeHtml(curr)}</span></div>
         <div class="text-[11px] text-slate-400 mt-1">الإيرادات المحصلة ناقص المصروفات</div>
       </div>
+      <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 md:col-span-2 xl:col-span-4">
+        <div class="text-sm font-extrabold text-white mb-3">ملخص مالي منفصل حسب العملة</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${currencyBreakdownHtml || '<div class="text-xs text-slate-400">لا توجد بيانات مالية بعد.</div>'}</div>
+        <div class="text-[11px] text-slate-500 mt-2">الأرقام في البطاقات الرئيسية تخص العملة الافتراضية فقط؛ لا يتم جمع عملات مختلفة في إجمالي واحد.</div>
+      </div>
     `;
   }
 
@@ -962,9 +984,9 @@ window.renderFinanceAndExpenses = function() {
           <td class="py-3 px-3 text-slate-300">${escapeHtml(e.date)}</td>
           <td class="py-3 px-3 font-bold text-white">${escapeHtml(e.title)}</td>
           <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-slate-700 text-sky-300">${escapeHtml(e.category || 'عام')}</span></td>
-          <td class="py-3 px-3 font-extrabold text-amber-400">${(Number(e.amount) || 0).toLocaleString()} ${escapeHtml(curr)}</td>
+          <td class="py-3 px-3 font-extrabold text-amber-400">${(Number(e.amount) || 0).toLocaleString()} ${escapeHtml(e.currency || curr)}</td>
           <td class="py-3 px-3">
-            <button type="button" onclick="window.deleteExpenseUI('${e.id}')" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold">🗑️ حذف</button>
+            <button type="button" onclick='window.deleteExpenseUI(${safeInlineArgument(e.id)})' class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold">🗑️ حذف</button>
           </td>
         </tr>
       `).join('');

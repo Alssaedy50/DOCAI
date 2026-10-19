@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>نظام عيادة د. صلاح الدين السعيدي - DOCAI GEMINI ERP</title>
 
-  <!-- الخط العربي الرسمي Cairo -->
+  <!-- الخط العربي الرسمي Tajawal -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -20,6 +20,8 @@
   <script src="js/qrcode.min.js"></script>
 
   <style>
+    /* DOCAI thermal receipt: explicit vertical layout for 80mm printers */
+    @media print { body.thermal-80mm-mode #receipt-capture-area { width: 80mm !important; max-width: 80mm !important; min-width: 0 !important; margin: 0 auto !important; padding: 4mm !important; border: 0 !important; box-shadow: none !important; font-size: 10pt !important; } body.thermal-80mm-mode #receipt-capture-area .receipt-wide-grid, body.thermal-80mm-mode #receipt-capture-area .grid { display: flex !important; flex-direction: column !important; width: 100% !important; } body.thermal-80mm-mode #receipt-capture-area img { max-width: 100% !important; height: auto !important; object-fit: contain !important; } }
     :root {
       --clinic-primary: #0B2545;
       --clinic-secondary: #1d6fa5;
@@ -27,7 +29,7 @@
     }
 
     * {
-      font-family: var(--clinic-font-family, 'Cairo'), sans-serif !important;
+      font-family: var(--clinic-font-family, 'Tajawal'), sans-serif !important;
       letter-spacing: 0px !important;
     }
 
@@ -162,7 +164,7 @@
       #tab-section-records .flex.items-center.gap-2 > *, #tab-section-inventory .flex.items-center.gap-2 > * { max-width: 100%; }
       #tab-section-finance #exp-title, #tab-section-finance #exp-amount { width: 100%; }
       #chat-user-input { min-width: 0; }
-      #signature-modal > div, #live-voice-call-modal > div { max-height: calc(100dvh - 24px); overflow-y: auto; }
+      #signature-modal > div { max-height: calc(100dvh - 24px); overflow-y: auto; }
       #signature-pad-canvas { height: 150px; }
     }
     @media (max-width: 380px) {
@@ -218,7 +220,6 @@
       #chat-user-input { min-height: 44px; }
       #tab-section-ai-chat .chat-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     }
-    #live-voice-call-modal, [onclick*="toggleLiveVoiceCall"], [onclick*="startLiveVoiceCall"] { display: none !important; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -233,7 +234,7 @@
           title="فتح القائمة الجانبية والإعدادات السريعة">
           ☰
         </button>
-        <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M64%2022v84M22%2064h84%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2217%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M64%2036v56M36%2064h56%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Logo"
+        <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M39%2022c-13%200-22%2010-22%2025%200%2017%209%2025%2013%2039%203%2012%206%2023%2013%2023%208%200%208-15%2013-24%203-5%205-5%208%200%205%209%205%2024%2013%2024%207%200%2010-11%2013-23%204-14%2013-22%2013-39%200-15-9-25-22-25-9%200-14%205-20%205s-11-5-22-5z%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2034c-6%200-11%205-12%2012M85%2034c6%200%2011%205%2012%2012%22%20fill%3D%22none%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Logo"
           class="clinic-logo-img w-11 h-11 rounded-xl bg-white p-1 object-contain shadow-md" crossorigin="anonymous" />
         <div>
           <h1 id="header-system-title" class="text-base sm:text-lg font-black text-white leading-tight">
@@ -258,10 +259,6 @@
           class="ai-model-selector bg-slate-900/90 border border-sky-400/40 text-white text-xs font-bold rounded-xl px-2.5 py-2 max-w-[190px]">
           <option value="auto">⚡ توجيه ذكي تلقائي</option>
         </select>
-        <button type="button" onclick="window.toggleLiveVoiceCall()"
-          class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-lg flex items-center gap-1.5">
-          <span>📞</span><span class="hidden sm:inline">مكالمة صوتية حية</span>
-        </button>
       </div>
     </div>
 

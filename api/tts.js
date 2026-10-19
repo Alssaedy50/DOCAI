@@ -6,7 +6,8 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
-  const text = String(body.text || '').trim().slice(0, 200);
+  const text = String(body.text || '').trim();
+  if (text.length > 200) return res.status(413).json({ error: 'قسّم النص إلى مقاطع لا تتجاوز 200 حرف.' });
   const key = process.env.GROQ_API_KEY;
   if (!key) return res.status(503).json({ error: 'GROQ_API_KEY is not configured for server-side speech.' });
   if (!text) return res.status(400).json({ error: 'النص فارغ.' });

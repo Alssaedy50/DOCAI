@@ -400,7 +400,7 @@ window.ClinicDB = {
 
   deductInventoryForServices(servicesList) {
     window.AppState.inventory.forEach(i => {
-      if (servicesList.includes(i.linkedService) || i.linkedService === 'كشف ومعاينة') {
+      if (i.linkedService && servicesList.includes(i.linkedService)) {
         if (i.qty > 0) {
           i.qty = Math.max(0, +(Number(i.qty) - 1).toFixed(2));
           i.totalCost = +(i.qty * (Number(i.unitPrice) || 0)).toFixed(2);
@@ -421,6 +421,7 @@ window.ClinicDB = {
       title: (title || 'مصروف عيادة').trim(),
       amount: Number(amount) || 0,
       category: category,
+      currency: window.AppState.settings?.identity?.defaultCurrency || 'ريال يمني',
       date: new Date().toISOString().slice(0, 10)
     };
     window.AppState.expenses.unshift(exp);
@@ -437,26 +438,53 @@ window.ClinicDB = {
     const receipts = window.AppState.receipts || [];
     const inventory = window.AppState.inventory || [];
     const expenses = window.AppState.expenses || [];
+    const defaultCurrency = window.AppState.settings?.identity?.defaultCurrency || 'ريال يمني';
+    const currencyTotals = new Map();
+    const bucket = currency => {
+      const key = String(currency || defaultCurrency).trim() || defaultCurrency;
+      if (!currencyTotals.has(key)) currencyTotals.set(key, {
+        currency: key, totalBilledAmount: 0, totalCollectedRevenue: 0,
+        totalPendingDebts: 0, totalExpenses: 0, receiptsCount: 0, debtorsCount: 0
+      });
+      return currencyTotals.get(key);
+    };
 
-    const totalBilled = receipts.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0);
-    const totalCollected = receipts.reduce((s, r) => s + (Number(r.paidAmount) || 0), 0);
-    const totalDebts = receipts.reduce((s, r) => s + (Number(r.remainingAmount) || 0), 0);
-    const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-    const totalInventoryValue = inventory.reduce((s, i) => s + ((Number(i.qty) || 0) * (Number(i.unitPrice) || 0)), 0);
-    const lowStockItems = inventory.filter(i => Number(i.qty) <= Number(i.minQty));
+    for (const receipt of receipts) {
+      const row = bucket(receipt.currency);
+      row.totalBilledAmount += Number(receipt.totalAmount) || 0;
+      row.totalCollectedRevenue += Number(receipt.paidAmount) || 0;
+      row.totalPendingDebts += Number(receipt.remainingAmount) || 0;
+      row.receiptsCount += 1;
+      if ((Number(receipt.remainingAmount) || 0) > 0) row.debtorsCount += 1;
+    }
+    for (const expense of expenses) {
+      bucket(expense.currency).totalExpenses += Number(expense.amount) || 0;
+    }
+
+    const currencyBreakdown = [...currencyTotals.values()].map(row => ({
+      ...row,
+      netCashProfit: row.totalCollectedRevenue - row.totalExpenses
+    })).sort((a, b) => a.currency.localeCompare(b.currency, 'ar'));
+    const current = currencyBreakdown.find(row => row.currency === defaultCurrency) || {
+      currency: defaultCurrency, totalBilledAmount: 0, totalCollectedRevenue: 0,
+      totalPendingDebts: 0, totalExpenses: 0, receiptsCount: 0, debtorsCount: 0, netCashProfit: 0
+    };
+    const totalInventoryValue = inventory.reduce((sum, item) => sum + ((Number(item.qty) || 0) * (Number(item.unitPrice) || 0)), 0);
+    const lowStockItems = inventory.filter(item => Number(item.qty) <= Number(item.minQty));
 
     return {
-      totalReceiptsCount: receipts.length,
-      totalBilledAmount: totalBilled,
-      totalCollectedRevenue: totalCollected,
-      totalPendingDebts: totalDebts,
-      debtorsCount: receipts.filter(r => (Number(r.remainingAmount) || 0) > 0).length,
-      totalExpenses: totalExpenses,
-      netCashProfit: totalCollected - totalExpenses,
+      totalReceiptsCount: current.receiptsCount,
+      totalBilledAmount: current.totalBilledAmount,
+      totalCollectedRevenue: current.totalCollectedRevenue,
+      totalPendingDebts: current.totalPendingDebts,
+      debtorsCount: current.debtorsCount,
+      totalExpenses: current.totalExpenses,
+      netCashProfit: current.netCashProfit,
+      currencyBreakdown,
       totalInventoryItems: inventory.length,
-      totalInventoryValue: totalInventoryValue,
+      totalInventoryValue,
       lowStockCount: lowStockItems.length,
-      lowStockNames: lowStockItems.map(i => `${i.name} (${i.qty} ${i.unit || 'عدد'})`)
+      lowStockNames: lowStockItems.map(item => `${item.name} (${item.qty} ${item.unit || 'عدد'})`)
     };
   },
 
