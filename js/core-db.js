@@ -47,6 +47,7 @@ const DEFAULT_SETTINGS = {
   },
   appearance: {
     theme: 'navy',
+    fontFamily: 'Tajawal',
     customPrimaryColor: '#0B2545',
     customSecondaryColor: '#1d6fa5',
     customAccentColor: '#00A8E8',
