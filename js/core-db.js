@@ -400,7 +400,7 @@ window.ClinicDB = {
 
   deductInventoryForServices(servicesList) {
     window.AppState.inventory.forEach(i => {
-      if (servicesList.includes(i.linkedService) || i.linkedService === 'كشف ومعاينة') {
+      if (i.linkedService && servicesList.includes(i.linkedService)) {
         if (i.qty > 0) {
           i.qty = Math.max(0, +(Number(i.qty) - 1).toFixed(2));
           i.totalCost = +(i.qty * (Number(i.unitPrice) || 0)).toFixed(2);
