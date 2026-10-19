@@ -23,13 +23,19 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           set -eu
-          for file in js/*.js; do
+          for file in js/*.js api/*.js; do
             echo "Checking $file"
             node --check "$file"
           done
-      - name: Verify critical entry points
+      - name: Verify critical entry points and API protection
         run: |
           grep -q "window.callAI" js/ai-router.js
           grep -q "window.updateReceiptQRCode" js/receipt-pdf.js
           grep -q "window.toggleServiceSelectionById" js/ui-controller.js
           grep -q "window.importLocalBackupJSON" js/core-db.js
+          grep -q "DOCAI_CLINIC_ACCESS_TOKEN" api/_security.js
+          grep -q "authorize(req, res, 'ai'" api/ai.js
+          grep -q "authorize(req, res, 'models'" api/models.js
+          grep -q "authorize(req, res, 'tts'" api/tts.js
+          grep -q "authorize(req, res, 'stt'" api/stt.js
+          grep -q "rec-tooth-fdi" index.html
