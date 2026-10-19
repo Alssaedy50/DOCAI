@@ -107,7 +107,6 @@ window.testAndDiscoverAllModels = async function() {
       window.AppState.verifiedModels = verified.map(m => m.id);
       window.saveSettingsState?.();
       window.updateModelSelectDropdown?.();
-      window.renderModelsTable?.();
       if (window.showToast) window.showToast(verified.length
         ? 'اكتمل فحص الخادم: ' + verified.length + ' نموذجًا اجتاز الاختبار.'
         : 'لم يجتز أي نموذج الاختبار. تحقق من مفاتيح المزودين والحصص في Vercel.', verified.length ? 'success' : 'warning');
