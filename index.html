@@ -1058,6 +1058,16 @@
               <input id="cfg-openrouter-key" type="password" dir="ltr" placeholder="sk-or-..."
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
             </div>
+            <div class="rounded-xl border border-amber-700/60 bg-amber-950/20 p-3 space-y-2">
+              <label for="cfg-clinic-access-token" class="block text-amber-200 font-bold mb-1">رمز وصول العيادة لخدمات الذكاء الاصطناعي</label>
+              <input id="cfg-clinic-access-token" type="password" dir="ltr" autocomplete="off" placeholder="أدخل رمز DOCAI_CLINIC_ACCESS_TOKEN"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+              <p class="text-xs text-slate-400">يحفظ هذا الرمز في جلسة المتصفح فقط، ولا يدخل في النسخ الاحتياطية أو إعدادات التخزين الدائم.</p>
+              <label class="flex items-start gap-2 text-xs text-amber-100">
+                <input id="cfg-remember-api-keys" type="checkbox" class="mt-0.5 accent-amber-500" />
+                <span>حفظ مفاتيح مزودي الذكاء الاصطناعي على هذا الجهاز فقط (فعّل الخيار على جهاز خاص وموثوق فقط).</span>
+              </label>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
