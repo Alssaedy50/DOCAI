@@ -1,4 +1,6 @@
+const { authorize } = require('./_security');
 module.exports = async function handler(req, res) {
+  if (!(await authorize(req, res, 'tts', 30, 60000))) return;
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'POST') {
