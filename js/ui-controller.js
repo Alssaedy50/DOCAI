@@ -447,6 +447,8 @@ window.resetReceiptForm = function() {
   window.AppState.editingReceiptId = null;
   window.AppState.selectedServices.clear();
   window.AppState.selectedServiceIds?.clear();
+  const toothFDIInput = document.getElementById('rec-tooth-fdi');
+  if (toothFDIInput) toothFDIInput.value = '';
   window.AppState.currentReceiverSig = '';
   window.AppState.currentAccountantSig = window.AppState.settings.appearance.permanentAccountantSig || '';
 
