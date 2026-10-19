@@ -97,7 +97,7 @@ window.testAndDiscoverAllModels = async function() {
     if (window.showToast) window.showToast('جارٍ اكتشاف واختبار النماذج من مفاتيح الخادم الآمنة…', 'info');
     try {
       const response = await fetchWithTimeout('/api/models', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: window.docaiApiHeaders({ 'Content-Type': 'application/json' }),
         cache: 'no-store', body: JSON.stringify({ mode: 'discover-and-test' })
       }, 60000);
       const data = await response.json().catch(() => ({}));
@@ -214,7 +214,7 @@ window.callAI = async function(prompt, imageBase64 = null, options = {}) {
     try {
       const response = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: window.docaiApiHeaders({ 'Content-Type': 'application/json' }),
         cache: 'no-store',
         body: JSON.stringify({ systemPrompt, userPrompt: userText, imageBase64, modelId: requested }),
         signal: controller.signal
