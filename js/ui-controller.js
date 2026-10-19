@@ -926,6 +926,15 @@ window.renderFinanceAndExpenses = function() {
   const expTbody = document.getElementById('expenses-table-body');
   const ov = window.ClinicDB.getFinancialOverview();
   const curr = window.AppState.settings.identity.defaultCurrency || 'ريال يمني';
+  const currencyBreakdownHtml = (ov.currencyBreakdown || []).map(row => `
+    <div class="rounded-lg bg-slate-900/70 border border-slate-700 p-3">
+      <div class="font-extrabold text-sky-300 mb-1">${escapeHtml(row.currency)}</div>
+      <div class="text-xs text-slate-300">الإيرادات: <strong>${row.totalCollectedRevenue.toLocaleString()}</strong></div>
+      <div class="text-xs text-slate-300">الديون: <strong>${row.totalPendingDebts.toLocaleString()}</strong></div>
+      <div class="text-xs text-slate-300">المصروفات: <strong>${row.totalExpenses.toLocaleString()}</strong></div>
+      <div class="text-xs text-emerald-300">الصافي: <strong>${row.netCashProfit.toLocaleString()}</strong></div>
+    </div>
+  `).join('');
 
   if (kpiContainer) {
     kpiContainer.innerHTML = `
@@ -949,6 +958,11 @@ window.renderFinanceAndExpenses = function() {
         <div class="text-2xl font-extrabold text-sky-400 mt-1">${ov.netCashProfit.toLocaleString()} <span class="text-xs">${escapeHtml(curr)}</span></div>
         <div class="text-[11px] text-slate-400 mt-1">الإيرادات المحصلة ناقص المصروفات</div>
       </div>
+      <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 md:col-span-2 xl:col-span-4">
+        <div class="text-sm font-extrabold text-white mb-3">ملخص مالي منفصل حسب العملة</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${currencyBreakdownHtml || '<div class="text-xs text-slate-400">لا توجد بيانات مالية بعد.</div>'}</div>
+        <div class="text-[11px] text-slate-500 mt-2">الأرقام في البطاقات الرئيسية تخص العملة الافتراضية فقط؛ لا يتم جمع عملات مختلفة في إجمالي واحد.</div>
+      </div>
     `;
   }
 
@@ -962,7 +976,7 @@ window.renderFinanceAndExpenses = function() {
           <td class="py-3 px-3 text-slate-300">${escapeHtml(e.date)}</td>
           <td class="py-3 px-3 font-bold text-white">${escapeHtml(e.title)}</td>
           <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-slate-700 text-sky-300">${escapeHtml(e.category || 'عام')}</span></td>
-          <td class="py-3 px-3 font-extrabold text-amber-400">${(Number(e.amount) || 0).toLocaleString()} ${escapeHtml(curr)}</td>
+          <td class="py-3 px-3 font-extrabold text-amber-400">${(Number(e.amount) || 0).toLocaleString()} ${escapeHtml(e.currency || curr)}</td>
           <td class="py-3 px-3">
             <button type="button" onclick="window.deleteExpenseUI('${e.id}')" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold">🗑️ حذف</button>
           </td>
