@@ -369,7 +369,7 @@ async function speakWithServerGroqTTS(text, isCurrentRequest = () => true) {
     try {
       response = await fetch('/api/tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: window.docaiApiHeaders({ 'Content-Type': 'application/json' }),
         cache: 'no-store',
         body: JSON.stringify({ text: spokenText }),
         signal: controller.signal
