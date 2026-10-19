@@ -14,6 +14,13 @@ const STORAGE_KEYS = {
   VERIFIED_MODELS: 'docai_gemini_verified_models_v3'
 };
 
+window.docaiApiHeaders = function(extraHeaders = {}) {
+  let token = '';
+  try { token = sessionStorage.getItem('docaiClinicAccessToken') || ''; } catch (_) {}
+  if (!token) token = document.getElementById('cfg-clinic-access-token')?.value?.trim() || '';
+  return { ...extraHeaders, Authorization: 'Bearer ' + token };
+};
+
 // قائمة وحدات القياس المعتمدة للمخزون الطبي
 window.INVENTORY_UNITS = [
   { value: 'عدد', label: 'عدد / حبة (Piece)' },
@@ -186,16 +193,25 @@ window.saveInventoryState = () => localStorage.setItem(STORAGE_KEYS.INVENTORY, J
 window.saveExpensesState = () => localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(window.AppState.expenses));
 window.saveVerifiedModelsState = () => localStorage.setItem(STORAGE_KEYS.VERIFIED_MODELS, JSON.stringify(window.AppState.verifiedModels));
 
-// Remove legacy persisted API keys once on startup. New keys can be entered for the current session.
+// Provider keys are persisted only when the user explicitly opts in on a private device.
 try {
+  const rememberKeys = localStorage.getItem('docai_remember_provider_keys_v1') === 'true';
   if (window.AppState.settings.ai) {
-    window.AppState.settings.ai.geminiKey = '';
-    window.AppState.settings.ai.groqKey = '';
-    window.AppState.settings.ai.openrouterKey = '';
+    if (rememberKeys) {
+      const saved = JSON.parse(localStorage.getItem('docai_provider_keys_v1') || '{}');
+      window.AppState.settings.ai.geminiKey = String(saved.geminiKey || '');
+      window.AppState.settings.ai.groqKey = String(saved.groqKey || '');
+      window.AppState.settings.ai.openrouterKey = String(saved.openrouterKey || '');
+    } else {
+      window.AppState.settings.ai.geminiKey = '';
+      window.AppState.settings.ai.groqKey = '';
+      window.AppState.settings.ai.openrouterKey = '';
+      localStorage.removeItem('docai_provider_keys_v1');
+    }
   }
   if (window.AppState.settings.cloud) window.AppState.settings.cloud.apiKey = '';
   window.saveSettingsState();
-} catch (error) { console.warn('Could not clear legacy persisted API keys:', error); }
+} catch (error) { console.warn('Could not initialize optional provider-key persistence:', error); }
 
 /* ==================== محرك التفقيط العربي ==================== */
 function convertUnderThousand(n) {
