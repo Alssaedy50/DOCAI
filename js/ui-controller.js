@@ -1224,6 +1224,10 @@ window.loadSettingsToUI = function() {
   setVal('cfg-gemini-key', ai.geminiKey || '');
   setVal('cfg-groq-key', ai.groqKey || '');
   setVal('cfg-openrouter-key', ai.openrouterKey || '');
+  try {
+    setVal('cfg-clinic-access-token', sessionStorage.getItem('docaiClinicAccessToken') || '');
+    setCheck('cfg-remember-api-keys', localStorage.getItem('docai_remember_provider_keys_v1') === 'true');
+  } catch (_) {}
   setVal('cfg-stt-engine', ai.sttEngine || 'ai_cloud');
   setVal('cfg-tts-engine', ai.ttsEngine || 'ai_cloud');
   setCheck('cfg-auto-speak', ai.autoSpeakReplies !== false);
@@ -1278,6 +1282,26 @@ window.saveAllSettingsFromUI = function() {
     ttsEngine: getVal('cfg-tts-engine', 'ai_cloud'),
     autoSpeakReplies: getCheck('cfg-auto-speak')
   };
+
+  try {
+    const clinicToken = getVal('cfg-clinic-access-token', '');
+    if (clinicToken) sessionStorage.setItem('docaiClinicAccessToken', clinicToken);
+    else sessionStorage.removeItem('docaiClinicAccessToken');
+
+    if (getCheck('cfg-remember-api-keys')) {
+      localStorage.setItem('docai_remember_provider_keys_v1', 'true');
+      localStorage.setItem('docai_provider_keys_v1', JSON.stringify({
+        geminiKey: s.ai.geminiKey,
+        groqKey: s.ai.groqKey,
+        openrouterKey: s.ai.openrouterKey
+      }));
+    } else {
+      localStorage.removeItem('docai_remember_provider_keys_v1');
+      localStorage.removeItem('docai_provider_keys_v1');
+    }
+  } catch (error) {
+    window.showToast('تعذر حفظ إعدادات المفاتيح في المتصفح. تحقق من أذونات التخزين.', 'warning');
+  }
 
   s.cloud = {
     apiKey: getVal('cfg-cloud-key', ''),
