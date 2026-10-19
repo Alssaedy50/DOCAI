@@ -898,7 +898,7 @@ function renderChatAttachmentPreviewUI() {
       <div class="flex items-center gap-2.5 overflow-hidden">
         ${thumbHtml}
         <div class="truncate">
-          <div class="font-bold text-sky-300 truncate">${String(att.fileName || '').replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[ch]))}</div>
+          <div class="font-bold text-sky-300 truncate">${String(att.fileName || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;')}</div>
           <div class="text-slate-400">جاهز للإرسال والتحليل مع رسالتك</div>
         </div>
       </div>
