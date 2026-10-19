@@ -82,12 +82,12 @@ window.captureCleanReceiptCanvas = async function(scaleFactor = 2.5) {
   clone.style.boxShadow = 'none';
   clone.style.borderRadius = '12px';
   clone.style.background = '#ffffff';
-  clone.style.fontFamily = "'Cairo', sans-serif";
+  clone.style.fontFamily = "'Tajawal', sans-serif";
   clone.style.letterSpacing = '0px';
   clone.querySelectorAll('.clinic-logo-img').forEach(img => {
-    img.style.width = '68px';
-    img.style.height = '68px';
-    img.style.maxWidth = '68px';
+    img.style.width = '72px';
+    img.style.height = '72px';
+    img.style.maxWidth = '72px';
     img.style.objectFit = 'contain';
     img.style.imageRendering = 'auto';
   });
