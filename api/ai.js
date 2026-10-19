@@ -85,6 +85,8 @@ module.exports = async function handler(req, res) {
   const userPrompt = String(body.userPrompt || body.prompt || "").trim().slice(0, 16000);
   const systemPrompt = String(body.systemPrompt || "").slice(0, 12000);
   const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64 : null;
+  const attachmentMime = imageBase64 ? ((String(imageBase64).match(/^data:([^;,]+)/i) || [])[1] || "image/jpeg").toLowerCase() : "";
+  const isPdfAttachment = attachmentMime === "application/pdf" || String(imageBase64 || "").startsWith("data:application/pdf;");
   const modelId = String(body.modelId || "auto");
   if (!userPrompt && !imageBase64) return send(res, 400, { error: "اكتب سؤالاً أو أرفق صورة أولاً" });
   if (imageBase64 && imageBase64.length > 8000000) return send(res, 413, { error: "حجم الصورة كبير؛ قلّل حجمها ثم أعد المحاولة" });
@@ -109,12 +111,14 @@ module.exports = async function handler(req, res) {
           catch (e) { failures.push("Gemini " + model + ": " + e.message); }
         }
       } else if (provider.name === "groq") {
+        if (isPdfAttachment) { failures.push("Groq: PDF attachments are supported only by Gemini in this endpoint"); continue; }
         const candidates = preferred === "groq" ? [modelId] : DEFAULT_MODELS.groq;
         for (const model of candidates) {
           try { answer = await askCompatible("https://api.groq.com/openai/v1/chat/completions", provider.key, model, systemPrompt, userPrompt, imageBase64); usedModel = model; if (answer) break; }
           catch (e) { failures.push("Groq " + model + ": " + e.message); }
         }
       } else {
+        if (isPdfAttachment) { failures.push("OpenRouter: PDF attachments are supported only by Gemini in this endpoint"); continue; }
         const headers = { "HTTP-Referer": "https://alssaedy-clinic-erp.vercel.app", "X-Title": "DOCAI Clinic ERP" };
         let candidates = preferred === "openrouter" && modelId !== "openrouter/auto" ? [modelId] : [];
         if (!candidates.length) {
