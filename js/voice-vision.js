@@ -345,8 +345,23 @@ window.speakText = async function(text, forceEngine = null) {
 
 async function speakWithServerGroqTTS(text, isCurrentRequest = () => true) {
   const spokenText = String(text || '').trim();
-  // The provider endpoint intentionally limits each utterance; do not silently truncate longer answers.
-  if (!spokenText || spokenText.length > 200) return false;
+  // Groq TTS accepts short utterances; split longer replies at natural boundaries and play sequentially.
+  if (!spokenText) return false;
+  if (spokenText.length > 200) {
+    const chunks = [];
+    let remaining = spokenText;
+    while (remaining.length > 200) {
+      let cut = Math.max(remaining.lastIndexOf('。', 200), remaining.lastIndexOf('.', 200), remaining.lastIndexOf('؟', 200), remaining.lastIndexOf('!', 200), remaining.lastIndexOf('،', 200), remaining.lastIndexOf(' ', 200));
+      if (cut < 80) cut = 200;
+      chunks.push(remaining.slice(0, cut + (cut < 200 ? 1 : 0)).trim());
+      remaining = remaining.slice(cut + (cut < 200 ? 1 : 0)).trim();
+    }
+    if (remaining) chunks.push(remaining);
+    for (const chunk of chunks) {
+      if (!isCurrentRequest() || !(await speakWithServerGroqTTS(chunk, isCurrentRequest))) return false;
+    }
+    return true;
+  }
   let audioUrl = null;
   let audio = null;
   let finishPlayback = null;
@@ -883,7 +898,7 @@ function renderChatAttachmentPreviewUI() {
       <div class="flex items-center gap-2.5 overflow-hidden">
         ${thumbHtml}
         <div class="truncate">
-          <div class="font-bold text-sky-300 truncate">${att.fileName}</div>
+          <div class="font-bold text-sky-300 truncate">${String(att.fileName || '').replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[ch]))}</div>
           <div class="text-slate-400">جاهز للإرسال والتحليل مع رسالتك</div>
         </div>
       </div>
