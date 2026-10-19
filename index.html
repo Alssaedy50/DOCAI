@@ -434,6 +434,13 @@
             <label class="block text-xs font-bold text-slate-300 mb-2">🦷 اختر الخدمات العلاجية (تُسعّر تلقائياً):</label>
             <div id="services-chips-container" class="grid grid-cols-2 gap-2"></div>
           </div>
+          <div>
+            <label for="rec-tooth-fdi" class="block text-xs font-bold text-slate-300 mb-1">ترقيم الأسنان (FDI)</label>
+            <input id="rec-tooth-fdi" type="text" dir="ltr" inputmode="numeric" placeholder="مثال: 11, 12, 26, 36"
+              oninput="window.updateLiveReceiptPreview()"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white" />
+            <p class="text-[11px] text-slate-500 mt-1">اختياري؛ أدخل أرقام الأسنان المفهرسة بنظام FDI مفصولة بفواصل.</p>
+          </div>
 
           <!-- المبالغ المالية -->
           <div class="grid grid-cols-3 gap-2.5 pt-1">
@@ -604,6 +611,10 @@
               <div class="border-b border-dashed border-slate-300 pb-2">
                 <span class="font-bold text-slate-600">وذلك مقابل (الخدمات العلاجية):</span>
                 <span id="preview-services-text" class="font-extrabold text-sky-900 mr-2">كشف وخدمات علاجية للأسنان</span>
+              </div>
+              <div id="preview-tooth-fdi-row" class="border-b border-dashed border-slate-300 pb-2 hidden">
+                <span class="font-bold text-slate-600">أرقام الأسنان (FDI):</span>
+                <span id="preview-tooth-fdi" dir="ltr" class="font-extrabold text-sky-900 mr-2"></span>
               </div>
 
               <div class="border-b border-dashed border-slate-300 pb-2">
