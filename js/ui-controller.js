@@ -65,6 +65,17 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function parseFDIToothNumbers(value) {
+  const tokens = String(value || '').trim().split(/[,،;\s]+/).filter(Boolean);
+  const valid = new Set();
+  [11, 21, 31, 41, 51, 61, 71, 81].forEach(start => {
+    const max = start >= 51 ? 5 : 8;
+    for (let n = 1; n <= max; n++) valid.add(String(start + n - 1));
+  });
+  const unique = [...new Set(tokens)];
+  return { values: unique.filter(n => valid.has(n)), invalid: unique.filter(n => !valid.has(n)) };
+}
+
 function formatMarkdownSimple(text) {
   const safe = escapeHtml(text);
   return safe
@@ -381,6 +392,9 @@ window.updateLiveReceiptPreview = function() {
   const servicesText = selectedServicesArr.length > 0
     ? selectedServicesArr.join(' + ')
     : (notes || 'كشف وخدمات علاجية للأسنان');
+  const toothFDIInput = document.getElementById('rec-tooth-fdi')?.value?.trim() || '';
+  const toothFDIParsed = parseFDIToothNumbers(toothFDIInput);
+  const toothFDIText = toothFDIParsed.invalid.length ? toothFDIInput : toothFDIParsed.values.join(', ');
 
   const words = window.numberToArabicWords(paidAmount, currency);
 
@@ -395,6 +409,9 @@ window.updateLiveReceiptPreview = function() {
   setText('preview-patient-name', patientName);
   setText('preview-patient-phone', patientPhone);
   setText('preview-services-text', servicesText);
+  setText('preview-tooth-fdi', toothFDIText);
+  const toothRow = document.getElementById('preview-tooth-fdi-row');
+  if (toothRow) toothRow.classList.toggle('hidden', !toothFDIText);
   setText('preview-total-amount', `${totalAmount.toLocaleString()} ${currency}`);
   setText('preview-paid-amount', `${paidAmount.toLocaleString()} ${currency}`);
   setText('preview-remaining-amount', `${remainingAmount.toLocaleString()} ${currency}`);
@@ -469,6 +486,12 @@ window.saveCurrentReceiptFromUI = function() {
   const totalAmount = Number(document.getElementById('rec-total-amount')?.value) || 0;
   const paidAmount = Number(document.getElementById('rec-paid-amount')?.value) || 0;
   const currency = document.getElementById('rec-currency')?.value || window.AppState.settings.identity.defaultCurrency;
+  const toothFDIParsed = parseFDIToothNumbers(document.getElementById('rec-tooth-fdi')?.value || '');
+  if (toothFDIParsed.invalid.length) {
+    window.showToast('أرقام FDI غير صحيحة: ' + toothFDIParsed.invalid.join(', ') + '. استخدم أرقام الأسنان المعتمدة مثل 11–18 أو 21–28.', 'warning');
+    document.getElementById('rec-tooth-fdi')?.focus();
+    return null;
+  }
 
   const payload = {
     id: window.AppState.editingReceiptId || undefined,
@@ -477,6 +500,7 @@ window.saveCurrentReceiptFromUI = function() {
     patientName: patientName,
     patientPhone: document.getElementById('rec-patient-phone')?.value?.trim() || '',
     services: window.getSelectedServiceNames ? window.getSelectedServiceNames() : Array.from(window.AppState.selectedServices),
+    toothFDI: toothFDIParsed.values.join(', '),
     totalAmount: totalAmount,
     paidAmount: paidAmount,
     remainingAmount: Math.max(0, totalAmount - paidAmount),
@@ -633,7 +657,7 @@ window.renderRecordsTable = function() {
     if (filterStatus === 'paid' && rem > 0) return false;
 
     if (!searchQ) return true;
-    const hay = `${r.receiptNo} ${r.patientName} ${r.patientPhone} ${(r.services || []).join(' ')} ${r.date}`.toLowerCase();
+    const hay = `${r.receiptNo} ${r.patientName} ${r.patientPhone} ${(r.services || []).join(' ')} ${r.toothFDI || ''} ${r.date}`.toLowerCase();
     return hay.includes(searchQ);
   });
 
@@ -658,7 +682,7 @@ window.renderRecordsTable = function() {
         <td class="py-3 px-3 text-slate-200" dir="ltr"><span class="whitespace-nowrap">${escapeHtml(r.date)}</span></td>
         <td class="py-3 px-3 font-bold text-white"><button type="button" onclick='window.editReceiptRecord(${safeInlineArgument(r.id)})' class="text-sky-200 hover:text-white underline-offset-4 hover:underline">${escapeHtml(r.patientName)}</button></td>
         <td class="py-3 px-3 text-slate-300" dir="ltr">${escapeHtml(r.patientPhone || '—')}</td>
-        <td class="py-3 px-3 text-slate-200">${escapeHtml((r.services || []).join(' + ') || 'خدمات عامة')}</td>
+        <td class="py-3 px-3 text-slate-200"><div>${escapeHtml((r.services || []).join(' + ') || 'خدمات عامة')}</div>${r.toothFDI ? `<div class="text-[10px] text-sky-300 mt-1" dir="ltr">FDI: ${escapeHtml(r.toothFDI)}</div>` : ''}</td>
         <td class="py-3 px-3 text-slate-100"><div class="flex flex-col gap-1 whitespace-nowrap"><span><span class="text-slate-400">المقبوض:</span> <b class="text-emerald-300" dir="ltr">${(Number(r.paidAmount) || 0).toLocaleString()}</b></span><span><span class="text-slate-400">الإجمالي:</span> <b class="text-sky-200" dir="ltr">${(Number(r.totalAmount) || 0).toLocaleString()}</b></span></div></td>
         <td class="py-3 px-3">${statusBadge}</td>
         <td class="py-3 px-3">
@@ -691,6 +715,7 @@ window.editReceiptRecord = function(id) {
   setVal('rec-date', rec.date);
   setVal('rec-patient-name', rec.patientName);
   setVal('rec-patient-phone', rec.patientPhone);
+  setVal('rec-tooth-fdi', rec.toothFDI || '');
   setVal('rec-total-amount', rec.totalAmount);
   setVal('rec-paid-amount', rec.paidAmount);
   setVal('rec-currency', rec.currency || 'ريال يمني');
