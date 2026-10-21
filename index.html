@@ -220,6 +220,143 @@
       #chat-user-input { min-height: 44px; }
       #tab-section-ai-chat .chat-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     }
+
+    /* ==================== Design refresh layer (screen only) ==================== */
+    @media screen {
+      :root {
+        --ui-bg: #060c17;
+        --ui-surface: #0d1626;
+        --ui-surface-2: #111c2f;
+        --ui-field: #081120;
+        --ui-border: rgba(148, 163, 184, 0.14);
+        --ui-border-strong: rgba(148, 163, 184, 0.24);
+        --ui-ring: rgba(56, 189, 248, 0.45);
+        --ui-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 12px 32px -12px rgba(0,0,0,0.6);
+      }
+
+      html { scroll-behavior: smooth; color-scheme: dark; }
+      html body {
+        background-color: var(--ui-bg);
+        background-image:
+          radial-gradient(1200px 500px at 85% -10%, rgba(29, 111, 165, 0.22), transparent 60%),
+          radial-gradient(900px 420px at 0% 0%, rgba(0, 168, 232, 0.08), transparent 60%);
+        background-attachment: fixed;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::selection { background: rgba(56, 189, 248, 0.35); color: #fff; }
+
+      /* Scrollbars */
+      * { scrollbar-width: thin; scrollbar-color: #24344d transparent; }
+      *::-webkit-scrollbar { width: 10px; height: 10px; }
+      *::-webkit-scrollbar-thumb { background: #24344d; border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+      *::-webkit-scrollbar-thumb:hover { background-color: #33496b; }
+
+      /* Header: glass bar */
+      html body > header.clinic-gradient-header {
+        background: linear-gradient(180deg, rgba(11, 37, 69, 0.92), rgba(11, 37, 69, 0.78));
+        -webkit-backdrop-filter: saturate(160%) blur(14px);
+        backdrop-filter: saturate(160%) blur(14px);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+        box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+      }
+      html body > header .clinic-logo-img { box-shadow: 0 0 0 1px rgba(255,255,255,0.2), 0 6px 18px -6px rgba(0,168,232,0.55); }
+      .menu-toggle-btn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0 !important; }
+      .menu-toggle-btn svg { width: 20px; height: 20px; }
+      html body > header .ai-model-selector { background-color: rgba(2, 6, 23, 0.6); border-color: rgba(56, 189, 248, 0.3); }
+
+      /* Cards / panels */
+      html body main .rounded-2xl.border,
+      html body main .rounded-3xl.border {
+        border-color: var(--ui-border);
+        box-shadow: var(--ui-shadow);
+      }
+      html body main .bg-slate-900\/95,
+      html body main .bg-slate-900\/90,
+      html body main .bg-slate-900\/80 { background-color: color-mix(in srgb, var(--ui-surface) 94%, transparent); }
+      html body main #smart-ai-receipt-bar {
+        background: linear-gradient(135deg, rgba(14, 116, 144, 0.18), rgba(13, 22, 38, 0.95) 45%);
+        border-color: rgba(56, 189, 248, 0.28);
+      }
+      html body main h2 { letter-spacing: 0 !important; }
+      html body main .border-b.border-slate-800 { border-color: var(--ui-border); }
+
+      /* Form fields */
+      html body main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+      html body main select,
+      html body main textarea,
+      html body #sidebar-drawer select,
+      html body #sidebar-drawer input[type="text"] {
+        background-color: var(--ui-field);
+        border-color: var(--ui-border-strong);
+        min-height: 42px;
+        transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+      }
+      html body main input[readonly] { background-color: rgba(15, 23, 42, 0.55); cursor: default; }
+      html body main input:hover:not([readonly]), html body main select:hover, html body main textarea:hover { border-color: rgba(148, 163, 184, 0.38); }
+      html body input:focus, html body select:focus, html body textarea:focus {
+        outline: none !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 0 3px var(--ui-ring);
+      }
+      html body main input::placeholder, html body main textarea::placeholder { color: #64748b; opacity: 1; }
+      html body main input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cursor: pointer; }
+      html body main label.block { color: #cbd5e1; }
+
+      /* Buttons */
+      html body button, html body label[class*="cursor-pointer"] {
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .12s ease, box-shadow .15s ease;
+      }
+      html body button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
+      html body button:focus-visible, html body a:focus-visible, html body label:focus-within {
+        outline: 2px solid #38bdf8;
+        outline-offset: 2px;
+      }
+      html body button:disabled { opacity: .55; cursor: not-allowed; }
+      html body main button.bg-emerald-600 { background-image: linear-gradient(180deg, #10b981, #059669); box-shadow: 0 10px 24px -12px rgba(16,185,129,0.8); }
+      html body main button.bg-emerald-600:hover { background-image: linear-gradient(180deg, #34d399, #10b981); }
+      html body main button.bg-sky-600 { background-image: linear-gradient(180deg, #0ea5e9, #0284c7); box-shadow: 0 10px 24px -12px rgba(14,165,233,0.8); }
+      html body main button.bg-sky-600:hover { background-image: linear-gradient(180deg, #38bdf8, #0ea5e9); }
+      html body main button.bg-rose-600 { background-image: linear-gradient(180deg, #f43f5e, #e11d48); box-shadow: 0 10px 24px -12px rgba(244,63,94,0.8); }
+      html body main button.bg-slate-800 { background-color: var(--ui-surface-2); border-color: var(--ui-border-strong); }
+      html body main button.bg-slate-800:hover { background-color: #1a2840; }
+
+      /* Service chips */
+      html body #services-chips-container > * { border-radius: 12px; min-height: 44px; }
+      html body #services-chips-container > *:hover { border-color: rgba(56, 189, 248, 0.5); }
+
+      /* Tables */
+      html body main table thead th { background: rgba(15, 23, 42, 0.85); color: #94a3b8; font-weight: 800; }
+      html body main table tbody tr { transition: background-color .12s ease; }
+      html body main table tbody tr:hover { background-color: rgba(56, 189, 248, 0.05); }
+
+      /* Receipt preview card lift */
+      html body #receipt-capture-area { box-shadow: 0 30px 60px -30px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06); }
+
+      /* Sidebar drawer */
+      html body #sidebar-drawer {
+        background: linear-gradient(180deg, #0b1424, #070e1a);
+        border-color: rgba(56, 189, 248, 0.16);
+      }
+      html body #sidebar-drawer [id^="drawer-btn-"] {
+        border-color: transparent;
+        padding-top: 0.7rem; padding-bottom: 0.7rem;
+        font-size: 13px;
+        color: #cbd5e1;
+      }
+      html body #sidebar-drawer [id^="drawer-btn-"]:hover { background-color: rgba(148, 163, 184, 0.08); color: #fff; }
+      html body #sidebar-drawer [id^="drawer-btn-"].border-sky-400 {
+        background-color: rgba(14, 165, 233, 0.14);
+        border-color: rgba(56, 189, 248, 0.35);
+        color: #fff;
+        box-shadow: inset -3px 0 0 #38bdf8;
+      }
+      html body #sidebar-drawer .bg-slate-950\/90 { background-color: rgba(13, 22, 38, 0.9); border-color: var(--ui-border); }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -230,9 +367,9 @@
       <!-- زر القائمة الجانبية + الشعار والعنوان -->
       <div class="flex items-center gap-3">
         <button type="button" onclick="window.toggleSidebarDrawer(true)"
-          class="p-2.5 rounded-xl bg-black/25 hover:bg-black/40 border border-white/15 text-white shadow-md"
-          title="فتح القائمة الجانبية والإعدادات السريعة">
-          ☰
+          class="menu-toggle-btn p-2.5 rounded-xl bg-black/25 hover:bg-black/40 border border-white/15 text-white shadow-md"
+          title="فتح القائمة الجانبية والإعدادات السريعة" aria-label="فتح القائمة الجانبية">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
         </button>
         <img src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2224%22%20fill%3D%22%230B2545%22%2F%3E%3Cpath%20d%3D%22M39%2022c-13%200-22%2010-22%2025%200%2017%209%2025%2013%2039%203%2012%206%2023%2013%2023%208%200%208-15%2013-24%203-5%205-5%208%200%205%209%205%2024%2013%2024%207%200%2010-11%2013-23%204-14%2013-22%2013-39%200-15-9-25-22-25-9%200-14%205-20%205s-11-5-22-5z%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M43%2034c-6%200-11%205-12%2012M85%2034c6%200%2011%205%2012%2012%22%20fill%3D%22none%22%20stroke%3D%22%2300A8E8%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E" alt="Logo"
           class="clinic-logo-img w-11 h-11 rounded-xl bg-white p-1 object-contain shadow-md" crossorigin="anonymous" />
@@ -999,7 +1136,7 @@
               </select>
             </div>
             <div>
-              <label class="block text-slate-300 font-bold mb-1">شفافية العلامة المائية (%)</label>
+              <label class="block text-slate-300 font-bold mb-1">شفافية ��لعلامة المائية (%)</label>
               <input id="cfg-watermark-opacity" type="number" min="0" max="40" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
             </div>
           </div>
